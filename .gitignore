@@ -37,6 +37,7 @@ Client ID.txt
 !package-lock.json
 !client/package.json
 !client/package-lock.json
+!client/src/data/*.json
 !server/package.json
 !server/package-lock.json
 !tsconfig.json

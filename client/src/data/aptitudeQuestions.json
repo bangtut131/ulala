@@ -1,0 +1,832 @@
+{
+    "questions": [
+        {
+            "id": 1,
+            "text": "1. Mana dari ke-5 ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "Beruang",
+                "Ular",
+                "Sapi",
+                "Anjing",
+                "Harimau"
+            ],
+            "correct": "Ular"
+        },
+        {
+            "id": 2,
+            "text": "2. Jika Anda mengatur ulang kata-kata \"LINKECI\", maka Anda akan mendapat nama sebuah:",
+            "options": [
+                "Lautan",
+                "Negara",
+                "Provinsi",
+                "Kota",
+                "Hewan"
+            ],
+            "correct": "Hewan"
+        },
+        {
+            "id": 3,
+            "text": "3. Mana dari ke-5 gambar ini yang paling melengkapi kalimat gambar tersebut?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q3.png",
+            "correct": "(d)"
+        },
+        {
+            "id": 4,
+            "text": "4. Mana dari ke-5 ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "Kentang",
+                "Jagung",
+                "Apel",
+                "Wortel",
+                "Kacang"
+            ],
+            "correct": "Apel"
+        },
+        {
+            "id": 5,
+            "text": "5. Mana dari ke-5 gambar ini yang paling melengkapi kalimat gambar tersebut?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q5.png",
+            "correct": "(b)"
+        },
+        {
+            "id": 6,
+            "text": "6. Saat ini John berumur 12 tahun, yaitu 3 kali lebih tua dari adiknya. Berapa umur John saat umurnya 2 kali lebih tua dari umur adiknya?",
+            "options": [
+                "15",
+                "16",
+                "18",
+                "20",
+                "21"
+            ],
+            "correct": "16"
+        },
+        {
+            "id": 7,
+            "text": "7. Mana dari ke-5 kata ini yang paling melengkapi kalimat tersebut?\nJika \"Kakak Laki-Laki\" itu \"Kakak Perempuan\", maka \" Keponakan Perempuan\" adalah:",
+            "options": [
+                "Ibu",
+                "Anak Perempuan",
+                "Bibi",
+                "Paman",
+                "Keponakan Laki-laki"
+            ],
+            "correct": "Keponakan Laki-laki"
+        },
+        {
+            "id": 8,
+            "text": "8. Mana dari ke-5 ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q8.png",
+            "correct": "(e)"
+        },
+        {
+            "id": 9,
+            "text": "9. Mana dari ke-5 kata ini yang paling melengkapi kalimat tersebut.\nJika \"Susu\" itu \"Gelas\", maka \"Surat\" itu:",
+            "options": [
+                "Stempel",
+                "Ballpoin",
+                "Amplop",
+                "Buku",
+                "Kiriman"
+            ],
+            "correct": "Amplop"
+        },
+        {
+            "id": 10,
+            "text": "10. Mana dari ke-5 yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q10.png",
+            "correct": "(e)"
+        },
+        {
+            "id": 11,
+            "text": "11. Mana dari ke-5 kata ini yang paling melengkapi kalimat tersebut?\nJika \"HIDUP\" itu \"PUDIH\" maka 5232 adalah:",
+            "options": [
+                "2523",
+                "3252",
+                "2325",
+                "3225",
+                "5223"
+            ],
+            "correct": "2325"
+        },
+        {
+            "id": 12,
+            "text": "12. \"Jika beberapa Smaugs adalah Thors dan beberapa Thors adalah Thrains, maka beberapa Smaugs pasti adalah Thrains.\"\nPernyataan ini adalah:",
+            "options": [
+                "Benar",
+                "Salah",
+                "Tidak keduanya"
+            ],
+            "correct": "Salah"
+        },
+        {
+            "id": 13,
+            "text": "13. Mana dari ke-5 ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q13.png",
+            "correct": "(d)"
+        },
+        {
+            "id": 14,
+            "text": "14. Mana dari ke-5 kata yang paling melengkapi kalimat tersebut?\nJika \"Pohon\" itu \"Tanah\" maka \"Cerobong Asap\" itu:",
+            "options": [
+                "Asap",
+                "Batu bata",
+                "Langit",
+                "Garasi",
+                "Rumah"
+            ],
+            "correct": "Rumah"
+        },
+        {
+            "id": 15,
+            "text": "15. Mana dari angka-angka ini yang TIDAK masuk ke dalam urutan di bawah ini?",
+            "sheetImage": "/sheets/q15.png",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)",
+                "(f)",
+                "(g)",
+                "(h)"
+            ],
+            "correct": "(h)"
+        },
+        {
+            "id": 16,
+            "text": "16. Mana dari ke-5 ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "Sentuh",
+                "Rasa",
+                "Dengar",
+                "Senyum",
+                "Lihat"
+            ],
+            "correct": "Senyum"
+        },
+        {
+            "id": 17,
+            "text": "17. Mana dari ke-5 gambar ini yang paling melengkapi kalimat gambar tersebut?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q17.png",
+            "correct": "(b)"
+        },
+        {
+            "id": 18,
+            "text": "18. Jack lebih tinggi dari Peter, dan Bill lebih pendek dari Jack.\nMana kalimat yang paling akurat?",
+            "options": [
+                "Bill lebih tinggi dari Peter",
+                "Bill lebih pendek dari Peter",
+                "Bill sama tingginya dengan Peter",
+                "Mustahil untuk mengetahui apakah Bill or Peter yang lebih tinggi"
+            ],
+            "correct": "Mustahil untuk mengetahui apakah Bill or Peter yang lebih tinggi"
+        },
+        {
+            "id": 19,
+            "text": "19. Mana dari ke -5 ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "Kaus kaki",
+                "Baju",
+                "Sepatu",
+                "Dompet",
+                "Topi"
+            ],
+            "correct": "Dompet"
+        },
+        {
+            "id": 20,
+            "text": "20. Mana dari ke-5 ini yang paling melengkapi kalimat tersebut?\nJika \"CAACCAC\" adalah \"3113313\" maka \"CACAACAC\" adalah:",
+            "options": [
+                "13133131",
+                "13133313",
+                "31311131",
+                "31311313",
+                "31313113"
+            ],
+            "correct": "31311313"
+        },
+        {
+            "id": 21,
+            "text": "21. Jika Anda mengatur ulang kata \"RAPIS\", maka Anda akan mendapat nama sebuah:",
+            "options": [
+                "Lautan",
+                "Negara",
+                "Provinsi",
+                "Kota",
+                "Hewan"
+            ],
+            "correct": "Kota"
+        },
+        {
+            "id": 22,
+            "text": "22. Mana dari ke-5 ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q22.png",
+            "correct": "(b)"
+        },
+        {
+            "id": 23,
+            "text": "23. Mana dari ke-5 kata ini yang paling melengkapi kalimat tersebut?\nJika \"Peluru\" adalah \"Senjata\" maka \"Bola Api\" adalah:",
+            "options": [
+                "Pentungan",
+                "Ketapel",
+                "Meriam",
+                "Pelempar",
+                "Jepretan"
+            ],
+            "correct": "Meriam"
+        },
+        {
+            "id": 24,
+            "text": "24. \"Jika beberapa Bifurs adalah Bofurs dan semua Gloins adalah Bofurs, maka beberapa Bifurs pasti adalah Gloins.\"\nPernyataan ini adalah:",
+            "options": [
+                "Benar",
+                "Salah",
+                "Tidak keduanya"
+            ],
+            "correct": "Salah"
+        },
+        {
+            "id": 25,
+            "text": "25. Mana dari ke-5 ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q25.png",
+            "correct": "(b)"
+        },
+        {
+            "id": 26,
+            "text": "26. Mana dari angka-angka ini yang TIDAK masuk ke dalam urutan di bawah ini?\nA - D - G - I - J - M - P - S\nPilih jawaban Anda :",
+            "options": [
+                "(a) D",
+                "(b) I",
+                "(c) J",
+                "(d) M",
+                "(e) S"
+            ],
+            "correct": "(b) I"
+        },
+        {
+            "id": 27,
+            "text": "27. Mana dari ke-5 gambar ini yang paling melengkapi kalimat gambar tersebut?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q27.png",
+            "correct": "(d)"
+        },
+        {
+            "id": 28,
+            "text": "28. Harga dari sebuah baju di-discount 20% untuk sebuah acara tahunan. Berapa % baju tersebut harus di-naik-kan dari harga discount tersebut, sehingga harga baju tersebut menjadi sama dengan awalnya?",
+            "options": [
+                "15%",
+                "20%",
+                "25%",
+                "30%",
+                "40%"
+            ],
+            "correct": "25%"
+        },
+        {
+            "id": 29,
+            "text": "29. Mana dari ke-5 ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "Tembaga",
+                "Besi",
+                "Kuningan",
+                "Emas",
+                "Timah"
+            ],
+            "correct": "Kuningan"
+        },
+        {
+            "id": 30,
+            "text": "30. Mana dari ke-5 gambar ini yang paling melengkapi kalimat gambar tersebut?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q30.png",
+            "correct": "(e)"
+        },
+        {
+            "id": 31,
+            "text": "31. Mana dari ke-5 ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "Botol",
+                "Cangkir",
+                "Bak",
+                "Terowongan",
+                "Mangkuk"
+            ],
+            "correct": "Terowongan"
+        },
+        {
+            "id": 32,
+            "text": "32. Mari memiliki beberapa kue. Setelah makan 1 kue, Mary memberikan 1/2 dari sisanya untuk adiknya. Setelah makan 1 kue lagi, Mary memberikan 1/2 dari sisanya untuk adiknya. Mary sekarang hanya memiliki 5 kue. Berapakah jumlah awal kue yang dimiliki Mary?",
+            "options": [
+                "11",
+                "22",
+                "23",
+                "45",
+                "46"
+            ],
+            "correct": "23"
+        },
+        {
+            "id": 33,
+            "text": "33. Mana dari ke-5 ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "Terigu",
+                "Jerami",
+                "Gandum",
+                "Bubur",
+                "Beras"
+            ],
+            "correct": "Jerami"
+        },
+        {
+            "id": 34,
+            "text": "34. Mana dari angka-angka ini yang TIDAK masuk ke dalam urutan di bawah ini?\n2 - 3 - 6 - 7 - 8 - 14 - 15 - 30",
+            "options": [
+                "Tiga",
+                "Tujuh",
+                "Delapan",
+                "Lima belas",
+                "Tiga puluh"
+            ],
+            "correct": "Delapan"
+        },
+        {
+            "id": 35,
+            "text": "35. Mana dari ke -5 gambar ini yang paling melengkapi kalimat gambar tersebut?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q35.png",
+            "correct": "(b)"
+        },
+        {
+            "id": 36,
+            "text": "36. \"Sebuah pesawat ruang angkasa menerima 3 pesan dalam bahasa yang aneh dari sebuah planet di kejauhan. Para astronot mempelajari pesan-pesan tersebut dan menemukan bahwa :\n\"Elros Aldarion Elendil\" berarti \"Bahaya Ledakan Roket\" dan \"Edain Mnyatur Elros\" berarti \"Bahaya Kebakaran Pesawat Ruang Angkasa\" dan \"Aldarion Gimilizor Gondor\" berarti \"Ledakan Gas Yang Buruk\". Apakah arti dari \"Elendil\"?",
+            "options": [
+                "Bahaya",
+                "Ledakan",
+                "Bukan apa-apa",
+                "Roket",
+                "Gas"
+            ],
+            "correct": "Roket"
+        },
+        {
+            "id": 37,
+            "text": "37. Mana dari ke-5 gambar ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q37.png",
+            "correct": "(b)"
+        },
+        {
+            "id": 38,
+            "text": "38. Mana dari ke-5 ini yang paling melengkapi kalimat tersebut?\n\"Jika \"GESPER\" adalah \"Kepala Gesper\", maka \"SEPATU\" adalah:",
+            "options": [
+                "Kaos Kaki",
+                "Tumit",
+                "Kaki",
+                "Tali Sepatu",
+                "Sol Sepatu"
+            ],
+            "correct": "Tali Sepatu"
+        },
+        {
+            "id": 39,
+            "text": "39. Mana dari ke-5 gambar ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q39.png",
+            "correct": "(d)"
+        },
+        {
+            "id": 40,
+            "text": "40. John menerima USD 0.41 sebagai kembalian dari pembeliannya di apotik.\nJika Jhon menerima 6 koin, maka ketiga dari koin-koin tersebut harusnya:",
+            "options": [
+                "Satu Sen",
+                "Lima sen",
+                "Sepuluh sen",
+                "Seperempat dollar",
+                "Setengah dollar"
+            ],
+            "correct": "Sepuluh sen"
+        },
+        {
+            "id": 41,
+            "text": "41. Mana dari ke-5 gambar ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q41.png",
+            "correct": "(d)"
+        },
+        {
+            "id": 42,
+            "text": "42. Jika Anda mengatur ulang kata-kata \"RMANJE\", maka anda akan mendapat nama sebuah:",
+            "options": [
+                "Lautan",
+                "Negara",
+                "Provinsi",
+                "Kota",
+                "Hewan"
+            ],
+            "correct": "Negara"
+        },
+        {
+            "id": 43,
+            "text": "43. Mana dari ke-5 pilihan yang paling tepat untuk melengkapi kalimat berikut:",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q43.png",
+            "correct": "(e)"
+        },
+        {
+            "id": 44,
+            "text": "44. \"Jika semua Wargs adalah Twerps dan tidak ada Twerps yang merupakan Gollums maka tidak ada Gollums yang pasti adalah Wargs.\"\nPernyataan ini adalah:",
+            "options": [
+                "Benar",
+                "Salah",
+                "Tidak Keduanya"
+            ],
+            "correct": "Benar"
+        },
+        {
+            "id": 45,
+            "text": "45. Mana dari ke-5 ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "Kuda",
+                "Kanguru",
+                "Kuda Zebra",
+                "Rusa",
+                "Keledai"
+            ],
+            "correct": "Kanguru"
+        },
+        {
+            "id": 46,
+            "text": "46. Mana dari gambar ini yang TIDAK sesuai dengan urutan gambar –gambar ini?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q46.png",
+            "correct": "(d)"
+        },
+        {
+            "id": 47,
+            "text": "47. Mana dari ke-5 ini yang paling melengkapi kalimat tersebut?\nJika \"Jari\" adalah \"Tangan\" maka \"Daun\" adalah:",
+            "options": [
+                "Pohon",
+                "Cabang",
+                "Bunga",
+                "Ranting",
+                "Kulit Kayu"
+            ],
+            "correct": "Ranting"
+        },
+        {
+            "id": 48,
+            "text": "48. \"Ibunya John mengirimkannya ke toko untuk membeli 9 kotak besar jeruk.\nJohn hanya dapat membawa 2 kotak dalam sekali jalan.\nBerapa kali ia harus bolak-balik ke toko?",
+            "options": [
+                "4",
+                "4 1/2",
+                "5",
+                "1/2",
+                "6"
+            ],
+            "correct": "5"
+        },
+        {
+            "id": 49,
+            "text": "49. Mana dari gambar ini yang TIDAK sesuai dengan urutan gambar-gambar ini?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q49.png",
+            "correct": "(e)"
+        },
+        {
+            "id": 50,
+            "text": "50. Mana dari ke-5 ini yang paling melengkapi kalimat tersebut?\nJika \"Kaki\" adalah \"Lutut\", maka \"Tangan\" adalah:",
+            "options": [
+                "Jari",
+                "Sikut",
+                "Tumit",
+                "Kaki",
+                "Lengan"
+            ],
+            "correct": "Sikut"
+        },
+        {
+            "id": 51,
+            "text": "51. Mana gambar yang paling mengikuti logika dari diagram di bawah ini?",
+            "options": [
+                "A",
+                "B",
+                "C",
+                "D"
+            ],
+            "sheetImage": "/sheets/q51.png",
+            "correct": "C"
+        },
+        {
+            "id": 52,
+            "text": "52. Mary ada di peringkat ke-13 dari yang terbaik dan juga peringkat ke-13 dari yang terburuk dalam lomba mengeja kata. Ada berapa peserta dalam lomba mengeja kata tersebut?",
+            "options": [
+                "13",
+                "25",
+                "26",
+                "27",
+                "28"
+            ],
+            "correct": "25"
+        },
+        {
+            "id": 53,
+            "text": "53. Mana dari ke-5 ini yang paling melengkapi kalimat tersebut?\nJika \"Air \" adalah \"Es Batu\", maka \"Susu\" adalah:",
+            "options": [
+                "Madu",
+                "Keju",
+                "Sereal",
+                "Kopi",
+                "Kue"
+            ],
+            "correct": "Keju"
+        },
+        {
+            "id": 54,
+            "text": "54. Mana dari angka ini yang TIDAK sesuai dengan urutan angka-angka ini?\n1 - 2 - 5 - 10 - 13 - 26 - 29 - 48",
+            "options": [
+                "(a) 1",
+                "(b) 2",
+                "(c) 5",
+                "(d) 10",
+                "(e) 13",
+                "(f) 26",
+                "(g) 29",
+                "(h) 48"
+            ],
+            "correct": "(h) 48"
+        },
+        {
+            "id": 55,
+            "text": "55. Mana dari ke-5 ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "Sayap",
+                "Iga",
+                "Salmon",
+                "Ayam",
+                "Sapi"
+            ],
+            "correct": "Salmon"
+        },
+        {
+            "id": 56,
+            "text": "56. \"Jika semua Fleeps adalah Sloops dan semua Sloops adalah Loopies, maka semua Fleeps adalah pasti Loopies.\"\nPernyataan ini adalah:",
+            "options": [
+                "Benar",
+                "Salah",
+                "Tidak Keduanya"
+            ],
+            "correct": "Benar"
+        },
+        {
+            "id": 57,
+            "text": "57. Mana dari ke-5 gambar ini yang paling melengkapi kalimat gambar tersebut?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q57.png",
+            "correct": "(e)"
+        },
+        {
+            "id": 58,
+            "text": "58. Mana dari ke-5 ini yang paling TIDAK mirip dengan 4 yang lain?",
+            "options": [
+                "Sentimeter",
+                "Kilometer",
+                "Hektar",
+                "Meter",
+                "Kaki"
+            ],
+            "correct": "Hektar"
+        },
+        {
+            "id": 59,
+            "text": "59. Mana dari ke-5 gambar ini yang paling melengkapi kalimat gambar tersebut?",
+            "options": [
+                "(a)",
+                "(b)",
+                "(c)",
+                "(d)",
+                "(e)"
+            ],
+            "sheetImage": "/sheets/q59.png",
+            "correct": "(c)"
+        },
+        {
+            "id": 60,
+            "text": "60. \"Seekor ikan mempunyai kepala sepanjang 9mm. Buntutnya sama panjangnya dengan ukuran kepalanya ditambah setengah kali ukuran badannya. Ukuran badannya adalah sama dengan ukuran kepala ditambah ukuran buntutnya.\" Berapa panjang ikan tersebut?",
+            "options": [
+                "27mm",
+                "54mm",
+                "63mm",
+                "72mm",
+                "81mm"
+            ],
+            "correct": "72mm"
+        }
+    ],
+    "scoring": {
+        "conversionTable": {
+            "0": 0,
+            "1": 40,
+            "2": 42,
+            "3": 45,
+            "4": 48,
+            "5": 50,
+            "6": 52,
+            "7": 54,
+            "8": 56,
+            "9": 58,
+            "10": 60,
+            "11": 62,
+            "12": 64,
+            "13": 66,
+            "14": 68,
+            "15": 70,
+            "16": 72,
+            "17": 74,
+            "18": 76,
+            "19": 78,
+            "20": 80,
+            "21": 82,
+            "22": 84,
+            "23": 86,
+            "24": 88,
+            "25": 90,
+            "26": 92,
+            "27": 94,
+            "28": 96,
+            "29": 98,
+            "30": 100,
+            "31": 102,
+            "32": 104,
+            "33": 106,
+            "34": 108,
+            "35": 110,
+            "36": 112,
+            "37": 114,
+            "38": 116,
+            "39": 118,
+            "40": 120,
+            "41": 122,
+            "42": 124,
+            "43": 126,
+            "44": 128,
+            "45": 130,
+            "46": 132,
+            "47": 134,
+            "48": 136,
+            "49": 138,
+            "50": 140,
+            "51": 142,
+            "52": 144,
+            "53": 146,
+            "54": 148,
+            "55": 150,
+            "56": 152,
+            "57": 154,
+            "58": 156,
+            "59": 158,
+            "60": 160
+        },
+        "categories": [
+            {
+                "min": 130,
+                "label": "Very Superior"
+            },
+            {
+                "min": 120,
+                "max": 129,
+                "label": "Superior"
+            },
+            {
+                "min": 110,
+                "max": 119,
+                "label": "Above Average"
+            },
+            {
+                "min": 90,
+                "max": 109,
+                "label": "Average"
+            },
+            {
+                "min": 80,
+                "max": 89,
+                "label": "Below Average"
+            }
+        ]
+    }
+}
