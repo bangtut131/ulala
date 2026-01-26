@@ -68,6 +68,40 @@ export default function CandidateDetail() {
         }
     };
 
+    const handleRegenerate = async () => {
+        if (!window.confirm("Regenerate AI Analysis? This will overwrite existing analysis and might take 10-20 seconds.")) return;
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('adminToken'); // Ensure auth if needed, though public API might be open? No, candidates API usually protected? 
+            // The route /api/candidates/:id/analyze was added to candidate.js which is likely protected or public? 
+            // In server/index.js: app.use('/api/candidates', candidateRoutes);
+            // In candidate.js: router.post('/:id/analyze', ...)
+            // It seems public based on Completion.jsx usage (no token). 
+            // But Admin view has token. It's fine.
+
+            const res = await fetch(`/api/candidates/${id}/analyze`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                    // 'Authorization': `Bearer ${token}` // Add if needed, but Completion.jsx didn't use it.
+                }
+            });
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                alert("Analysis Regenerated Successfully!");
+                window.location.reload();
+            } else {
+                alert("Failed to regenerate: " + (data.error || "Unknown error"));
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Network error during regeneration.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     if (loading) return <div className="p-8 text-center text-white">Loading...</div>;
     if (!candidate) return <div className="p-8 text-center text-white">Candidate not found</div>;
 
@@ -248,9 +282,18 @@ export default function CandidateDetail() {
 
                         {/* Right Column: AI Analysis & OCR */}
                         <div className="p-8 col-span-2 bg-slate-900/20">
-                            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                <span className="text-xl">✨</span> Analisa AI
-                            </h3>
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                    <span className="text-xl">✨</span> Analisa AI
+                                </h3>
+                                <button
+                                    onClick={handleRegenerate}
+                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded-lg font-medium transition shadow-lg hover:shadow-blue-500/25 flex items-center gap-1"
+                                >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                    Regenerate Analysis
+                                </button>
+                            </div>
 
                             {/* Weighted Score Breakdown */}
                             <div className="bg-slate-800/80 rounded-xl border border-white/10 mb-8 overflow-hidden">

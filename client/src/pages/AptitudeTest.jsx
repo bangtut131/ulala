@@ -117,7 +117,7 @@ export default function AptitudeTest() {
             }
         }
 
-        navigate('/complete');
+        navigate('/complete', { state: { candidateId } });
     }
 
     const handleSubmit = async () => {
