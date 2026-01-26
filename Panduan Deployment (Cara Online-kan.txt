@@ -1,0 +1,84 @@
+Panduan Deployment (Cara Online-kan Web App)
+Berikut adalah langkah-langkah untuk meng-online-kan aplikasi HR Auto Screening ini ke hosting atau server Anda sendiri.
+
+1. Persiapan (Prerequisites)
+Sebelum memulai, pastikan Anda memiliki:
+
+Domain & Hosting: Disarankan menggunakan VPS (Virtual Private Server) seperti DigitalOcean, Linode, atau IDCloudHost untuk fleksibilitas penuh. Jika menggunakan Shared Hosting (cPanel), pastikan mendukung Node.js.
+WAHA (WhatsApp API): Aplikasi ini membutuhkan WAHA untuk mengirim pesan. WAHA biasanya berjalan menggunakan Docker.
+Opsi 1: Install Docker di VPS Anda dan jalankan image devlikeapro/waha.
+Opsi 2: Gunakan layanan hosting WAHA pihak ketiga jika ada.
+2. Build Frontend (React)
+Aplikasi React perlu di-"build" menjadi file statis (HTML/CSS/JS) agar ringan dan cepat.
+
+Buka terminal di folder client.
+Jalankan perintah:
+npm run build
+Setelah selesai, akan muncul folder baru bernama dist di dalam folder client. Folder dist inilah yang berisi website Anda yang siap tayang.
+3. Persiapan Backend (Server)
+Pastikan file 
+server/settings.json
+ TIDAK ikut di-upload jika berisi data sensitif lokal, atau kosongkan isinya. Server akan membuatnya otomatis.
+Pastikan folder uploads ada di server.
+4. Cara Upload ke Hosting (VPS - Recommended)
+Jika Anda menggunakan VPS (Ubuntu/Debian):
+
+Upload File: Gunakan FileZilla atau SCP untuk upload seluruh folder server dan folder client/dist ke server (misal ke /var/www/hr-screening).
+
+Setup Backend:
+
+cd /var/www/hr-screening/server
+npm install --production
+Setup Environment: Pastikan PORT diatur (misal 3000) atau biarkan default.
+
+Jalankan dengan PM2: Agar aplikasi tetap hidup meski server restart.
+
+npm install -g pm2
+pm2 start index.js --name "hr-app"
+pm2 save
+pm2 startup
+Setup Nginx (Reverse Proxy): Install Nginx dan atur config agar domain Anda mengarah ke port 3000. Configure Nginx root untuk melayani file statis dari folder client/dist untuk halaman depan, dan proxy ke localhost:3000 untuk /api.
+
+Contoh simpel config Nginx:
+
+server {
+    server_name yourdomain.com;
+    
+    # Frontend files
+    location / {
+        root /var/www/hr-screening/client/dist;
+        try_files $uri $uri/ /index.html;
+    }
+    # Backend API
+    location /api {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+    }
+}
+5. Cara Upload ke Hosting (cPanel / Shared Hosting)
+Jika hosting Anda mendukung "Setup Node.js App":
+
+Buat aplikasi Node.js baru di cPanel.
+Upload folder server ke path aplikasi tersebut.
+Upload isi folder client/dist ke folder public_html (atau folder public aplikasi Anda).
+Masuk ke terminal cPanel (atau SSH hosting), masuk ke folder server, lalu npm install.
+Penting: Anda mungkin perlu menyesuaikan 
+index.js
+ di server agar bisa melayani frontend (client/dist) jika cPanel tidak mengizinkan root folder terpisah.
+Edit 
+server/index.js
+:
+// Tambahkan ini setelah routes lain sebelum app.listen
+const path = require('path');
+app.use(express.static(path.join(__dirname, '../public_html'))); 
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public_html/index.html'));
+});
+6. Integrasi WAHA
+Jangan lupa update pengaturan di halaman Admin (/admin/settings) setelah website online:
+
+WAHA Base URL: Ganti http://localhost:3000 dengan URL WAHA Anda (misal http://waha.yourdomain.com atau IP VPS Anda).
+Google Redirect URI: Jangan lupa tambahkan domain baru Anda ke Google Cloud Console > APIs & Services > Credentials > Authorized redirect URIs.

@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+
+}
+
+model Candidate {
+  id        Int      @id @default(autoincrement())
+  fullName  String
+  email     String   @unique
+  phone     String
+  position  String?
+  religion  String?
+  bloodType String?
+  address   String?
+  nik       String?
+  simOwnership String?
+  simNumber    String?
+  medicalHistory String?
+  experience   String? // Stored as JSON string
+  education    String? // Stored as JSON string
+  cvUrl     String?
+  cvText    String? // Store raw OCR text here for quick access
+  cvDriveId String?
+  createdAt DateTime @default(now())
+  discResult DiscResult?
+  analysis  Analysis?
+}
+
+model DiscResult {
+  id          Int      @id @default(autoincrement())
+  candidateId Int      @unique
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+  dScore      Int
+  iScore      Int
+  sScore      Int
+  cScore      Int
+  profile     String
+  answers     String
+}
+
+model Analysis {
+  id          Int      @id @default(autoincrement())
+  candidateId Int      @unique
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+  matchScore  Int
+  content     String
+  ocrText     String?
+  createdAt   DateTime @default(now())
+}

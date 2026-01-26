@@ -1,0 +1,43 @@
+node_modules
+.env
+.env.local
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database
+# Database
+# Database
+dev.db
+*.sqlite
+server/settings.json
+server/data.json
+server/dev.db
+server/test_*.js
+server/test_*.txt
+
+# Uploads
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Editor
+.vscode
+.idea
+
+# Build
+client/dist
+dist
+
+# Secrets / Credentials
+Client ID.txt
+*.json
+!package.json
+!package-lock.json
+!client/package.json
+!client/package-lock.json
+!server/package.json
+!server/package-lock.json
+!tsconfig.json
+!jsconfig.json

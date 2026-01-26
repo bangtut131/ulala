@@ -1,0 +1,11 @@
+-- Migration to add comprehensive biodata fields
+ALTER TABLE candidates 
+ADD COLUMN IF NOT EXISTS dob DATE,
+ADD COLUMN IF NOT EXISTS emergency_contact TEXT,
+ADD COLUMN IF NOT EXISTS other_info TEXT,
+ADD COLUMN IF NOT EXISTS nik VARCHAR(20),
+ADD COLUMN IF NOT EXISTS sim_ownership VARCHAR(50),
+ADD COLUMN IF NOT EXISTS sim_number VARCHAR(50),
+ADD COLUMN IF NOT EXISTS medical_history TEXT,
+ADD COLUMN IF NOT EXISTS education JSONB,
+ADD COLUMN IF NOT EXISTS experience JSONB;

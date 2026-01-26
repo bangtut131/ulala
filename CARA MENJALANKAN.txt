@@ -1,0 +1,59 @@
+How to Verify
+Start the Server:
+cd server
+node index.js
+Start the Client:
+cd client
+npm run dev
+Open Dashboard:
+Navigate to http://localhost:5173/admin (or your local port).
+Check Columns:
+DISC Profile: Should now show values like "Dominance", "Influence", etc., instead of "High D" (static).
+AI Match: Should now show a percentage (e.g., "85%") based on the AI analysis, instead of "0%" or missing.
+Panduan Lengkap Mengaktifkan Integrasi Google (Wajib Dilakukan)
+Sistem membutuhkan "izin khusus" (Service Account) untuk bisa mengupload file ke Google Drive Anda secara otomatis. Ini berbeda dengan link sharing biasa.
+
+Langkah 1: Buat Project di Google Cloud
+Buka Google Cloud Console.
+Jika belum pernah, login dengan akun Google Anda.
+Klik dropdown di sebelah logo Google Cloud (kiri atas) > Klik New Project.
+Beri nama (misal: HR-Screening-App) > Klik Create.
+Tunggu sebentar, lalu Pilih Project yang baru dibuat tersebut dari notifikasi atau dropdown.
+Langkah 2: Aktifkan API (Drive & Sheets)
+Agar aplikasi bisa mengakses Drive & Sheets, kita harus mengaktifkan fiturnya.
+
+Di menu samping kiri, pilih APIs & Services > Library.
+Cari "Google Drive API" > Klik hasilnya > Klik Enable.
+Kembali ke Library lagi.
+Cari "Google Sheets API" > Klik hasilnya > Klik Enable.
+Langkah 3: Buat Service Account (Robot Akses)
+Di menu APIs & Services, pilih Credentials.
+Klik + CREATE CREDENTIALS (di atas) > Pilih Service Account.
+Isi nama (misal: app-robot) > Klik Create and Continue > Klik Done.
+Di daftar "Service Accounts" di bawah, Anda akan melihat email baru yang aneh (contoh: app-robot@hr-screening-app.iam.gserviceaccount.com). Copy email ini.
+Langkah 4: Download Kunci Rahasia
+Klik pada nama email service account tersebut (link biru).
+Masuk ke tab KEYS (di bagian atas).
+Klik ADD KEY > Create new key.
+Pilih JSON > Klik CREATE.
+File akan terdownload ke komputer Anda. Jangan berikan file ini ke orang lain.
+Langkah 5: Hubungkan ke Aplikasi
+Buka file JSON yang terdownload dengan Notepad/Text Editor.
+Copy SEMUA teks di dalamnya.
+Buka Aplikasi HR > Dashboard > Settings.
+Paste ke kolom Service Account JSON.
+Klik Simpan.
+Langkah 6: Beri Akses Folder & Sheet (PENTING!)
+Aplikasi (Robot) tidak bisa melihat folder Anda kecuali Anda mengundangnya.
+
+Buka Google Drive Anda.
+Klik Kanan pada Folder tujuan upload CV > Share.
+Paste Email Service Account (dari Langkah 3) ke kolom "Add people".
+Pastikan role-nya Editor > Klik Send.
+Lakukan hal yang sama untuk File Google Sheet Anda.
+Expected Result
+Setelah langkah di atas selesai, coba input kandidat baru.
+File PDF akan muncul di folder Drive, dan data akan masuk ke Sheet.
+Expected Result
+Candidates with processed applications should show their actual DISC profile and AI match score in the dashboard table.
+After configuring credentials, new uploads will appear in your Google Drive and Sheets.

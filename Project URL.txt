@@ -1,0 +1,5 @@
+Project URL
+https://kdpfltrdczlcrvcsiisq.supabase.co
+
+Anon Key
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkcGZsdHJkY3psY3J2Y3NpaXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5NzQxMjEsImV4cCI6MjA4MjU1MDEyMX0.sm0-v34BKi7lGPz9esfa2XNSF7PM0qWIJAzSliYDvbs
