@@ -26,7 +26,6 @@ const prisma = db;
 const upload = multer({ storage: multer.memoryStorage() });
 
 // POST /api/candidates - Submit Application
-// POST /api/candidates - Submit Application
 router.post('/', upload.single('cv'), async (req, res) => {
     try {
         const {
@@ -233,170 +232,41 @@ router.post('/:id/aptitude', async (req, res) => {
     }
 });
 
-// POST /api/candidates/:id/analyze - Trigger AI Analysis Synchronously
+// POST /api/candidates/:id/analyze - Trigger AI Analysis
+// Optimized: Triggers Netlify Background Function for robust processing
 router.post('/:id/analyze', async (req, res) => {
-    // Increase timeout if possible (Netlify is strict 10s, but we'll try)
-    // Actually best effort.
     try {
         const { id } = req.params;
         const candidateId = parseInt(id);
 
-        console.log(`[Analyze] Starting synchronous analysis for Candidate ID: ${candidateId}`);
+        console.log(`[Analyze] Triggering analysis for Candidate ID: ${candidateId}`);
 
-        // 1. Fetch Candidate with Full Data
-        const candidate = await prisma.candidate.findUnique({
-            where: { id: candidateId },
-            useAdmin: true
-        });
+        // Define Background Function URL
+        // In local: http://localhost:8888/.netlify/functions/process-analysis-background
+        // In prod: process.env.URL + /.netlify/functions/process-analysis-background
+        const baseUrl = process.env.URL || 'http://localhost:8888';
+        const bgFunctionUrl = `${baseUrl}/.netlify/functions/process-analysis-background`;
 
-        if (!candidate) return res.status(404).json({ error: "Candidate not found" });
+        console.log(`[Analyze] Delegating to Background Worker: ${bgFunctionUrl}`);
 
-        // 2. Check if already analyzed? (Optional: Force regenerate if requested?)
-        // For now, we always regenerate to fix "irrelevant" results.
+        // Fire and Forget fetch to the background function
+        // We do NOT await the result because the background function might take 15 mins.
+        // We just want to make sure it received the request.
 
-        // 3. Load Dependencies
-        const { analyzeCandidate } = require('../services/aiAnalysis');
-        const pdfParse = require('pdf-parse');
-        const { downloadFromDrive, createFolder, uploadToDrive } = require('../services/googleDrive');
-        const { generateBiodataPDF, generateAnalysisPDF } = require('../services/reportGenerator');
-        const { mergePDFs } = require('../services/pdfMerger');
-        const { sendNotification } = require('../services/whatsapp');
-        const { getSettings } = require('../services/settings');
-
-        // 4. Get OCR Text (if missing)
-        let cvText = candidate.cvText;
-        if (!cvText || cvText.length < 50 || cvText.startsWith("[OCR Failed")) {
-            try {
-                console.log("CV Text missing/invalid, trying to fetch...");
-                let buffer = null;
-                if (candidate.cvDriveId) {
-                    buffer = await downloadFromDrive(candidate.cvDriveId);
-                } else if (candidate.cvUrl) {
-                    const urlParts = candidate.cvUrl.split('/resumes/');
-                    if (urlParts.length > 1) {
-                        const { data: blob } = await supabase.storage.from('resumes').download(urlParts[1]);
-                        if (blob) buffer = Buffer.from(await blob.arrayBuffer());
-                    }
-                }
-
-                if (buffer) {
-                    const data = await pdfParse(buffer);
-                    cvText = data.text;
-                    // Update DB
-                    await prisma.candidate.update({
-                        where: { id: candidate.id },
-                        data: { cvText: cvText }
-                    });
-                }
-            } catch (e) {
-                console.error("OCR Retry Failed:", e.message);
-                // Proceed even if OCR fails, using what we have
-            }
+        // Note: fetch is available globally in Node 18+ which Netlify uses default now.
+        // If older node, consider installing node-fetch.
+        try {
+            fetch(bgFunctionUrl, {
+                method: 'POST',
+                body: JSON.stringify({ candidateId }),
+                headers: { 'Content-Type': 'application/json' }
+            }).catch(err => console.error("Failed to trigger background function:", err));
+        } catch (e) {
+            console.error("Fetch implementation issue:", e);
         }
 
-        // 5. Run AI Analysis
-        // We need Aptitude Result too
-        // Since we are in the same route file, we can assume db is available, but let's fetch it via Prisma wrapper/db
-        // Actually candidate might already include it if findUnique included relations?
-        // db.js wrapper usually fetches relations. Let's start fresh fetch to be sure.
-
-        // Note: db.candidate.findUnique ALREADY includes discResult and aptitudeResult (mapped).
-
-        let analysisData;
-        try {
-            analysisData = await analyzeCandidate(
-                candidate,
-                cvText || "No CV Text",
-                candidate.discResult || {},
-                candidate.aptitudeResult || {}
-            );
-        } catch (err) {
-            console.error("AI Analysis Failed:", err);
-            throw new Error("AI Analysis Failed: " + err.message);
-        }
-
-        // 6. Save Analysis to DB
-        await prisma.analysis.create({
-            data: {
-                candidateId: candidateId,
-                matchScore: analysisData.matchScore,
-                content: analysisData.content,
-                verdict: analysisData.verdict,
-                ocrText: cvText ? cvText.substring(0, 5000) : '',
-                cvScore: analysisData.details?.cvScore || 0,
-                discScore: analysisData.details?.discScore || 0,
-                aptitudeScore: analysisData.details?.aptitudeScore || 0,
-                personalDataScore: analysisData.details?.personalDataScore || 0
-            }
-        });
-
-        // 7. Integrations (Async - we don't await strictly for response)
-        // Check Settings
-        const settings = await getSettings();
-
-        // WhatsApp
-        try {
-            await sendNotification({ ...candidate, discResult: candidate.discResult }, analysisData, settings);
-        } catch (e) { console.warn("WA Failed:", e.message); }
-
-        // Sheets
-        try {
-            // Need re-fetch to get analysis relation? Or just pass data.
-            // appendToSheet needs full object.
-            const { appendToSheet } = require('../services/googleSheets');
-            await appendToSheet({ ...candidate, discResult: candidate.discResult }, analysisData);
-        } catch (e) { console.warn("Sheets Failed:", e.message); }
-
-        // 8. Generate & Merge PDF
-        // This is the heaviest part.
-        try {
-            console.log("Generating Full Report...");
-            const candidateDataForReport = {
-                ...candidate,
-                strengths: typeof candidate.strengths === 'string' ? JSON.parse(candidate.strengths) : candidate.strengths,
-                weaknesses: typeof candidate.weaknesses === 'string' ? JSON.parse(candidate.weaknesses) : candidate.weaknesses
-            };
-
-            const biodataPdfBuffer = await generateBiodataPDF(candidateDataForReport);
-            const analysisPdfBuffer = await generateAnalysisPDF(
-                candidateDataForReport,
-                candidate.discResult,
-                candidate.aptitudeResult,
-                analysisData
-            );
-
-            // Get Original CV
-            let originalCvBuffer = null;
-            if (candidate.cvDriveId) {
-                try {
-                    originalCvBuffer = await downloadFromDrive(candidate.cvDriveId);
-                } catch (dlErr) { console.error("CV DL Fail:", dlErr.message); }
-            }
-
-            const buffersToMerge = [biodataPdfBuffer];
-            if (originalCvBuffer) buffersToMerge.push(originalCvBuffer);
-            buffersToMerge.push(analysisPdfBuffer);
-
-            let finalPdfBuffer = await mergePDFs(buffersToMerge);
-
-            // Upload
-            const folderName = `${candidate.fullName} - ${candidate.position || 'Applicant'}`;
-            const folderId = await createFolder(folderName);
-            const finalFileName = `Full Report - ${candidate.fullName}.pdf`;
-
-            const tempPath = path.join(require('os').tmpdir(), finalFileName);
-            fs.writeFileSync(tempPath, finalPdfBuffer);
-            await uploadToDrive(tempPath, finalFileName, folderId);
-            fs.unlinkSync(tempPath);
-
-            console.log("Report PDF Generated & Uploaded.");
-
-        } catch (pdfErr) {
-            console.error("PDF Gen Failed:", pdfErr);
-            // Don't fail the request just for PDF, the data is saved.
-        }
-
-        res.json({ success: true, data: analysisData });
+        // Return immediately to the client
+        res.json({ success: true, message: 'Analysis queued in background.' });
 
     } catch (error) {
         console.error("Analysis Endpoint Error:", error);
