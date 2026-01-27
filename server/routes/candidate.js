@@ -278,46 +278,19 @@ router.post('/:id/aptitude', async (req, res) => {
         });
 
         // 2. Trigger AI Analysis (BACKGROUND PROCESS)
-        // Checks if running on Netlify (checking for NETLIFY dev or prod env vars could be tricky, 
-        // but checking process.env.NETLIFY or just assuming if full URL is available)
-
-        // Strategy: 
-        // If Local -> Function Call directly (Async)
-        // If Netlify -> Fetch Background Function URL (Async)
-
-        const isNetlify = process.env.NETLIFY || process.env.URL?.includes('netlify');
-        const siteUrl = process.env.URL || 'http://localhost:8888';
-        // Auto-detect URL or use a hardcoded fallback if needed.
-        // In Netlify, URL is the site URL. 
+        // Reverted to direct in-process call as background function was unreliable.
+        // This relies on the server staying alive long enough to complete.
 
         (async () => {
             const { runAnalysis } = require('../services/analysisWorker');
+            console.log(`[Trigger] Running Analysis for ${id} (In-Process)`);
 
-            if (isNetlify) {
-                try {
-                    const bgUrl = `${siteUrl}/.netlify/functions/analysis-background`;
-                    console.log(`[Trigger] Calling Background Function: ${bgUrl}`);
-
-                    // Fire and forget fetch
-                    // We don't await the result, just the dispatch
-                    fetch(bgUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            candidateId: parseInt(id),
-                            aptitudeResultId: aptitudeResult.id
-                        })
-                    }).catch(err => console.error("Background trigger failed:", err));
-
-                } catch (e) {
-                    console.error("Failed to trigger background function:", e);
-                    // Fallback to direct call if fetch fails? risky on timeout.
-                    // But better to try.
-                    runAnalysis(parseInt(id), aptitudeResult.id);
-                }
-            } else {
-                console.log("[Trigger] Running Analysis Locally (Direct Call)...");
-                runAnalysis(parseInt(id), aptitudeResult.id);
+            // We await it here only inside the async wrapper. 
+            // The main response (res.json) below fires immediately.
+            try {
+                await runAnalysis(parseInt(id), aptitudeResult.id);
+            } catch (e) {
+                console.error("[Trigger] Analysis Failed:", e);
             }
         })();
 
