@@ -41,7 +41,10 @@ router.post('/', upload.single('cv'), async (req, res) => {
         if (!file) return res.status(400).json({ error: 'CV file is required' });
 
         // STRICT VALIDATION: PDF ONLY & SIZE LIMIT (10MB)
-        if (file.mimetype !== 'application/pdf') {
+        // Allow octet-stream IF extension is .pdf (Mobile quirk)
+        const isPdfMime = file.mimetype === 'application/pdf' || (file.mimetype === 'application/octet-stream' && file.originalname.toLowerCase().endsWith('.pdf'));
+
+        if (!isPdfMime) {
             return res.status(400).json({ error: 'Format file tidak didukung. Mohon upload PDF.' });
         }
         if (file.size > 10 * 1024 * 1024) {
@@ -160,7 +163,9 @@ router.post('/', upload.single('cv'), async (req, res) => {
                 strengths: strengths ? (typeof strengths === 'string' ? JSON.parse(strengths) : strengths) : [],
                 weaknesses: weaknesses ? (typeof weaknesses === 'string' ? JSON.parse(weaknesses) : weaknesses) : [],
                 biggestAchievement,
-                vacancyId // Pass it
+                vacancyId, // Pass it
+                // Log metadata
+                otherInfo: (otherInfo || "") + `\n[Meta] Device Upload: ${file.mimetype} (${(file.size / 1024).toFixed(1)}KB)`
             }
         });
 
