@@ -278,185 +278,46 @@ router.post('/:id/aptitude', async (req, res) => {
         });
 
         // 2. Trigger AI Analysis (BACKGROUND PROCESS)
-        // Fire-and-forget: Return response immediately to prevent timeout
+        // Checks if running on Netlify (checking for NETLIFY dev or prod env vars could be tricky, 
+        // but checking process.env.NETLIFY or just assuming if full URL is available)
+
+        // Strategy: 
+        // If Local -> Function Call directly (Async)
+        // If Netlify -> Fetch Background Function URL (Async)
+
+        const isNetlify = process.env.NETLIFY || process.env.URL?.includes('netlify');
+        const siteUrl = process.env.URL || 'http://localhost:8888';
+        // Auto-detect URL or use a hardcoded fallback if needed.
+        // In Netlify, URL is the site URL. 
+
         (async () => {
-            try {
-                // Use Admin Privilege to ensure we get DISC/Aptitude results even if RLS hides them
-                const candidate = await prisma.candidate.findUnique({
-                    where: { id: parseInt(id) },
-                    useAdmin: true
-                });
+            const { runAnalysis } = require('../services/analysisWorker');
 
-                if (candidate) {
-                    console.log(`Starting Final Deep Analysis for ${candidate.fullName}...`);
+            if (isNetlify) {
+                try {
+                    const bgUrl = `${siteUrl}/.netlify/functions/analysis-background`;
+                    console.log(`[Trigger] Calling Background Function: ${bgUrl}`);
 
-                    // LAZY LOAD DEPENDENCIES
-                    const { analyzeCandidate } = require('../services/aiAnalysis');
-                    const pdfParse = require('pdf-parse');
-                    const { downloadFromDrive, createFolder, uploadToDrive } = require('../services/googleDrive');
-                    const { generateBiodataPDF, generateAnalysisPDF } = require('../services/reportGenerator');
-                    const { mergePDFs } = require('../services/pdfMerger');
-                    const { sendNotification } = require('../services/whatsapp');
-                    const { getSettings } = require('../services/settings');
-
-                    // A. Get OCR Text
-                    let cvText = candidate.cvText;
-                    if (!cvText || cvText.length < 50) {
-                        try {
-                            console.log("CV Text missing in DB, trying to fetch...");
-                            let buffer = null;
-                            if (candidate.cvDriveId) {
-                                const { downloadFromDrive } = require('../services/googleDrive');
-                                buffer = await downloadFromDrive(candidate.cvDriveId);
-                            } else if (candidate.cvUrl) {
-                                const urlParts = candidate.cvUrl.split('/resumes/');
-                                if (urlParts.length > 1) {
-                                    const { data: blob } = await supabase.storage.from('resumes').download(urlParts[1]);
-                                    if (blob) buffer = Buffer.from(await blob.arrayBuffer());
-                                }
-                            }
-
-                            if (buffer) {
-                                const data = await pdfParse(buffer);
-                                cvText = data.text;
-                                await prisma.candidate.update({
-                                    where: { id: candidate.id },
-                                    data: { cvText: cvText }
-                                });
-                            }
-                        } catch (e) {
-                            console.error("OCR Retry Failed:", e);
-                        }
-                    }
-
-                    // B. AI Analysis
-                    let analysisData;
-                    try {
-                        analysisData = await analyzeCandidate(candidate, cvText || "No CV Text", candidate.discResult || {}, aptitudeResult);
-                    } catch (err) {
-                        console.error("Analysis Failed:", err);
-                        analysisData = {
-                            matchScore: 0,
-                            content: "AI Analysis Failed. Error: " + err.message,
-                            verdict: "Error",
-                            details: {}
-                        };
-                    }
-
-                    // C. Save Analysis
-                    await prisma.analysis.create({
-                        data: {
+                    // Fire and forget fetch
+                    // We don't await the result, just the dispatch
+                    fetch(bgUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
                             candidateId: parseInt(id),
-                            matchScore: analysisData.matchScore,
-                            content: analysisData.content,
-                            verdict: analysisData.verdict,
-                            ocrText: cvText ? cvText.substring(0, 5000) : '',
-                            cvScore: analysisData.details?.cvScore || 0,
-                            discScore: analysisData.details?.discScore || 0,
-                            aptitudeScore: analysisData.details?.aptitudeScore || 0,
-                            personalDataScore: analysisData.details?.personalDataScore || 0
-                        }
-                    });
-                    console.log(`Analysis saved for ${candidate.fullName}`);
+                            aptitudeResultId: aptitudeResult.id
+                        })
+                    }).catch(err => console.error("Background trigger failed:", err));
 
-                    // D. Integrations (Sheets & WhatsApp)
-                    try {
-                        const { appendToSheet } = require('../services/googleSheets');
-                        await appendToSheet({ ...candidate, discResult: candidate.discResult }, analysisData);
-                    } catch (sheetErr) { console.warn("Google Sheet failed:", sheetErr.message); }
-
-                    try {
-                        const { getSettings } = require('../services/settings');
-                        const { sendNotification } = require('../services/whatsapp');
-                        const settings = await getSettings();
-                        await sendNotification({ ...candidate, discResult: candidate.discResult }, analysisData, settings);
-                    } catch (waErr) { console.warn("WhatsApp failed:", waErr.message); }
-
-                    // E. Generate MERGED Report PDF
-                    try {
-                        console.log("Generating and Merging Full Report...");
-
-                        // 1. Generate Parts
-                        // Note: formatting candidate data for generator
-                        const candidateDataForReport = {
-                            ...candidate,
-                            strengths: typeof candidate.strengths === 'string' ? JSON.parse(candidate.strengths) : candidate.strengths,
-                            weaknesses: typeof candidate.weaknesses === 'string' ? JSON.parse(candidate.weaknesses) : candidate.weaknesses
-                        };
-
-                        const { generateBiodataPDF, generateAnalysisPDF } = require('../services/reportGenerator');
-
-                        // Part A: Biodata
-                        const biodataPdfBuffer = await generateBiodataPDF(candidateDataForReport);
-
-                        // Part C: Analysis (DISC + Aptitude + AI)
-                        const analysisPdfBuffer = await generateAnalysisPDF(
-                            candidateDataForReport,
-                            candidate.discResult,
-                            aptitudeResult,
-                            analysisData
-                        );
-
-                        // Part B: Original CV (Download)
-                        let originalCvBuffer = null;
-                        if (candidate.cvDriveId) {
-                            try {
-                                originalCvBuffer = await downloadFromDrive(candidate.cvDriveId);
-                                console.log("Downloaded Original CV from Drive for Merging.");
-                            } catch (dlErr) { console.error("Could not download CV from Drive:", dlErr.message); }
-                        } else if (candidate.cvUrl) {
-                            try {
-                                const urlParts = candidate.cvUrl.split('/resumes/');
-                                if (urlParts.length > 1) {
-                                    const { data: blob } = await supabase.storage.from('resumes').download(urlParts[1]);
-                                    if (blob) originalCvBuffer = Buffer.from(await blob.arrayBuffer());
-                                }
-                            } catch (sbErr) { console.error("Could not download CV from Supabase:", sbErr.message); }
-                        }
-
-                        // 3. Merge: [Biodata] + [CV] + [Analysis]
-                        const { mergePDFs } = require('../services/pdfMerger');
-                        const buffersToMerge = [biodataPdfBuffer];
-
-                        if (originalCvBuffer) {
-                            console.log("Adding Original CV to merge list...");
-                            buffersToMerge.push(originalCvBuffer);
-                        } else {
-                            console.warn("Original CV buffer missing, skipping CV in report.");
-                        }
-
-                        buffersToMerge.push(analysisPdfBuffer);
-
-                        let finalPdfBuffer = null;
-                        try {
-                            finalPdfBuffer = await mergePDFs(buffersToMerge);
-                        } catch (mergeErr) {
-                            console.error("Merge Failed (likely corrupt CV PDF). Fallback to Biodata + Analysis.", mergeErr.message);
-                            // Fallback: Skip CV
-                            finalPdfBuffer = await mergePDFs([biodataPdfBuffer, analysisPdfBuffer]);
-                        }
-
-                        // 4. Upload to Drive (In the User's Folder)
-                        // Ensure folder structure is correct.
-                        // We need the folder ID. We can try to find or create.
-                        const folderName = `${candidate.fullName} - ${candidate.position || 'Applicant'}`;
-                        const folderId = await createFolder(folderName);
-
-                        const finalFileName = `Full Report - ${candidate.fullName}.pdf`;
-                        const tempPath = path.join(require('os').tmpdir(), finalFileName);
-                        fs.writeFileSync(tempPath, finalPdfBuffer);
-
-                        await uploadToDrive(tempPath, finalFileName, folderId);
-                        console.log("Full Merged Report Uploaded Successfully.");
-
-                        fs.unlinkSync(tempPath);
-
-                    } catch (e) {
-                        console.error("Report Generation/Merge failed", e);
-                    }
+                } catch (e) {
+                    console.error("Failed to trigger background function:", e);
+                    // Fallback to direct call if fetch fails? risky on timeout.
+                    // But better to try.
+                    runAnalysis(parseInt(id), aptitudeResult.id);
                 }
-            } catch (bgError) {
-                console.error("Background Analysis Error:", bgError);
+            } else {
+                console.log("[Trigger] Running Analysis Locally (Direct Call)...");
+                runAnalysis(parseInt(id), aptitudeResult.id);
             }
         })();
 
