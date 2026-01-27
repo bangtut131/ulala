@@ -63,7 +63,26 @@ apiRouter.use('/vacancies', vacancyRoutes); // Public & Admin Vacancies
 
 app.use('/api', apiRouter);
 // Netlify Functions Path - Handle both with and without trailing slash
+// Netlify Functions Path - Handle both with and without trailing slash
 app.use('/.netlify/functions/api', apiRouter);
+
+// --- SERVE FRONTEND (Railway/VPS specific) ---
+const clientBuildPath = path.join(__dirname, '../client/dist');
+if (require('fs').existsSync(clientBuildPath)) {
+    console.log("Serving Frontend from:", clientBuildPath);
+    app.use(express.static(clientBuildPath));
+
+    // Catch-all: serve index.html for SPA routing
+    app.get('*', (req, res) => {
+        // Skip API calls - they should have matched apiRouter above
+        if (req.url.startsWith('/api') || req.url.startsWith('/.netlify')) {
+            return res.status(404).json({ error: 'API Route Not Found' });
+        }
+        res.sendFile(path.join(clientBuildPath, 'index.html'));
+    });
+} else {
+    console.warn("Client build not found at:", clientBuildPath);
+}
 
 // Only listen if run directly (not imported as a function)
 if (require.main === module) {
