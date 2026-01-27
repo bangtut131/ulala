@@ -70,7 +70,24 @@ export default function CandidateForm() {
     };
 
     const handleFileChange = (e) => {
-        setFile(e.target.files[0]);
+        const selectedFile = e.target.files[0];
+        if (selectedFile) {
+            // Strict check for PDF
+            if (selectedFile.type !== 'application/pdf' && !selectedFile.name.toLowerCase().endsWith('.pdf')) {
+                alert("Mohon upload file dengan format PDF (.pdf). File gambar tidak didukung untuk analisis AI.");
+                e.target.value = null; // Reset input
+                setFile(null);
+                return;
+            }
+            // Check file size (max 5MB safe limit for mobile)
+            if (selectedFile.size > 5 * 1024 * 1024) {
+                alert("Ukuran file terlalu besar. Maksimal 5MB.");
+                e.target.value = null;
+                setFile(null);
+                return;
+            }
+            setFile(selectedFile);
+        }
     };
 
     const handleSubmit = async (e) => {

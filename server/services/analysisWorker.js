@@ -2,10 +2,26 @@ const { db } = require('./db');
 const { supabase } = require('./supabaseClient');
 const prisma = db;
 
+// Helper to log progress to DB for Admin visibility
+async function logProgress(candidateId, message) {
+    try {
+        console.log(`[Worker] ${message}`);
+        // Fetch current info first to append
+        const c = await prisma.candidate.findUnique({ where: { id: parseInt(candidateId) }, select: { otherInfo: true } });
+        const newLog = `\n[Log ${new Date().toLocaleTimeString()}] ${message}`;
+        await prisma.candidate.update({
+            where: { id: parseInt(candidateId) },
+            data: { otherInfo: (c?.otherInfo || "") + newLog }
+        });
+    } catch (e) {
+        console.warn("Failed to write log to DB:", e.message);
+    }
+}
+
 // Heavy analysis logic encapsulated for Background Execution
 async function runAnalysis(candidateId, aptitudeResultId = null) {
     try {
-        console.log(`[Worker] Starting Analysis for Candidate ID: ${candidateId}`);
+        await logProgress(candidateId, "Worker Started");
 
         // 1. Fetch Candidate with Admin Privilege
         const candidate = await prisma.candidate.findUnique({
@@ -72,6 +88,7 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
                 if (candidate.cvDriveId) {
                     buffer = await downloadFromDrive(candidate.cvDriveId);
                 } else if (candidate.cvUrl) {
+                    await logProgress(candidateId, "Downloading CV from Storage...");
                     const urlParts = candidate.cvUrl.split('/resumes/');
                     if (urlParts.length > 1) {
                         const { data: blob } = await supabase.storage.from('resumes').download(urlParts[1]);
@@ -80,6 +97,7 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
                 }
 
                 if (buffer) {
+                    await logProgress(candidateId, "Starting PDF Parse (OCR)...");
                     const data = await pdfParse(buffer);
                     cvText = data.text;
                     // Update Candidate
@@ -96,8 +114,9 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
         // B. AI Analysis
         let analysisData;
         try {
-            console.log("[Worker] Running AI Analysis...");
+            await logProgress(candidateId, "Starting AI Analysis...");
             analysisData = await analyzeCandidate(candidate, cvText || "No CV Text", candidate.discResult || {}, aptitudeResult);
+            await logProgress(candidateId, "AI Analysis Complete.");
         } catch (err) {
             console.error("[Worker] AI Analysis Failed:", err);
             analysisData = {
@@ -209,6 +228,7 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
 
     } catch (error) {
         console.error("[Worker] Critical Error:", error);
+        await logProgress(candidateId, "CRITICAL FAILED: " + error.message);
         return { success: false, error: error.message };
     }
 }

@@ -40,6 +40,14 @@ router.post('/', upload.single('cv'), async (req, res) => {
 
         if (!file) return res.status(400).json({ error: 'CV file is required' });
 
+        // STRICT VALIDATION: PDF ONLY & SIZE LIMIT (10MB)
+        if (file.mimetype !== 'application/pdf') {
+            return res.status(400).json({ error: 'Format file tidak didukung. Mohon upload PDF.' });
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            return res.status(400).json({ error: 'Ukuran file terlalu besar. Maksimal 10MB.' });
+        }
+
         // DUPLICATE CHECK
         const existingCandidate = await prisma.candidate.findUnique({
             where: { email }
