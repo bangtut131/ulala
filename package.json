@@ -5,7 +5,7 @@
   "main": "functions/api.js",
   "scripts": {
     "start": "node server/index.js",
-    "build": "npm install && npm install --prefix client && npm run build --prefix client",
+    "build": "npx prisma generate --schema=./server/prisma/schema.prisma && npm install && npm install --prefix client && npm run build --prefix client",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
@@ -26,9 +26,8 @@
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
     "pdfkit": "^0.17.2",
-    "serverless-http": "^4.0.0"
-  },
-  "devDependencies": {
+    "serverless-http": "^4.0.0",
     "prisma": "^7.2.0"
-  }
+  },
+  "devDependencies": {}
 }
