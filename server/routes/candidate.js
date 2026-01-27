@@ -380,7 +380,10 @@ router.post('/:id/link-request', async (req, res) => {
         // Let's do a direct Supabase update here for standard 'request_id' column
         const { error } = await supabase
             .from('candidates')
-            .update({ request_id: parseInt(requestId) })
+            .update({
+                request_id: parseInt(requestId),
+                status: 'Screening' // Auto-move to Screening phase
+            })
             .eq('id', parseInt(id));
 
         if (error) throw error;

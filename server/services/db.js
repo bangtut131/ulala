@@ -179,6 +179,8 @@ const db = {
         create: async ({ data }) => {
             // Map 'createdAt' to snake_case if necessary, or let Supabase handle default now()
             let requestId = null;
+            // USER REQUEST: Disable auto-linking. Let HC team assign manually.
+            /*
             if (data.vacancyId) {
                 // Fetch vacancy to get manpower_request_id
                 const { data: vac, error: vacErr } = await supabaseAdmin
@@ -191,6 +193,7 @@ const db = {
                     requestId = vac.manpower_request_id;
                 }
             }
+            */
 
             const payload = {
                 full_name: data.fullName,
