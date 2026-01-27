@@ -73,7 +73,8 @@ if (require('fs').existsSync(clientBuildPath)) {
     app.use(express.static(clientBuildPath));
 
     // Catch-all: serve index.html for SPA routing
-    app.get('*', (req, res) => {
+    // Note: Express 5 requires regex for wildcard or different syntax
+    app.get(/.*/, (req, res) => {
         // Skip API calls - they should have matched apiRouter above
         if (req.url.startsWith('/api') || req.url.startsWith('/.netlify')) {
             return res.status(404).json({ error: 'API Route Not Found' });
