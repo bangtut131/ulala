@@ -307,9 +307,16 @@ export default function CandidateDetail() {
                             </div>
 
                             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Data CV (OCR)</h3>
-                            <div className="bg-black/40 text-slate-400 p-6 rounded-xl border border-white/5 font-mono text-xs overflow-auto max-h-60 shadow-inner">
+                            <div className="bg-black/40 text-slate-400 p-6 rounded-xl border border-white/5 font-mono text-xs overflow-auto max-h-60 shadow-inner mb-8">
                                 <pre className="whitespace-pre-wrap">
                                     {candidate.analysis?.ocrText || "[OCR Data Not Available]"}
+                                </pre>
+                            </div>
+
+                            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Info Lain (System Logs & Debug)</h3>
+                            <div className="bg-black/40 text-green-400 p-6 rounded-xl border border-white/5 font-mono text-xs overflow-auto max-h-60 shadow-inner">
+                                <pre className="whitespace-pre-wrap">
+                                    {candidate.otherInfo || "[No System Logs Available]"}
                                 </pre>
                             </div>
                         </div>
