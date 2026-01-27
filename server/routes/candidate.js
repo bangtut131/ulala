@@ -116,7 +116,7 @@ router.post('/', upload.single('cv'), async (req, res) => {
                 // Delete from Supabase Storage if successful (Space saving)
                 if (!driveId.toString().startsWith('mock_')) {
                     console.log(`[Storage] Drive Upload Success (ID: ${driveId}). Deleting ${fileName} from Supabase...`);
-                    // supabaseAdmin.storage.from('resumes').remove([fileName]); // Async cleanup
+                    await supabaseAdmin.storage.from('resumes').remove([fileName]); // Cleanup to save space
                 }
             } else {
                 console.warn("Google Drive Upload Incomplete:", driveResult.error || "No ID returned");
