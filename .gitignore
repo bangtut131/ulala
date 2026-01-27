@@ -33,3 +33,6 @@ dist
 # Secrets
 hr-screening-*.json
 Client ID.txt
+
+# Local Netlify folder
+.netlify

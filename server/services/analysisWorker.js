@@ -1,20 +1,8 @@
-const { PrismaClient } = require('@prisma/client');
-const { db } = require('./db'); // Use wrapper if needed, but worker usually needs direct access or consistent access
-const prisma = db; // Re-use the existing db connection
-
-const { analyzeCandidate } = require('./aiAnalysis');
-const pdfParse = require('pdf-parse');
-const { downloadFromDrive, createFolder, uploadToDrive } = require('./googleDrive');
-const { generateBiodataPDF, generateAnalysisPDF } = require('./reportGenerator');
-const { mergePDFs } = require('./pdfMerger');
-const { sendNotification } = require('./whatsapp');
-const { getSettings } = require('./settings');
-const { appendToSheet } = require('./googleSheets');
+const { db } = require('./db');
 const { supabase } = require('./supabaseClient');
+const prisma = db;
 
-const fs = require('fs');
-const path = require('path');
-
+// Heavy analysis logic encapsulated for Background Execution
 async function runAnalysis(candidateId, aptitudeResultId = null) {
     try {
         console.log(`[Worker] Starting Analysis for Candidate ID: ${candidateId}`);
@@ -30,33 +18,56 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
             return;
         }
 
-        // If aptitudeResult is passed via ID (optional, usually attached to candidate or fetched)
-        // But in our flow, we just saved it.
-        // Let's refetch aptitudeResult to be sure
+        // Fetch Aptitude Result if provided
         let aptitudeResult = null;
         if (aptitudeResultId) {
-            aptitudeResult = await prisma.aptitudeResult.findUnique({ where: { id: parseInt(aptitudeResultId) } });
-        } else {
-            // Try to find the latest
-            const aptResults = await prisma.aptitudeResult.findMany({
-                where: { candidateId: parseInt(candidateId) },
-                orderBy: { createdAt: 'desc' },
-                take: 1
-            });
-            aptitudeResult = aptResults[0];
+            // Fix: db.aptitudeResult might not have findUnique. Use safe approach.
+            try {
+                if (prisma.aptitudeResult.findUnique) {
+                    aptitudeResult = await prisma.aptitudeResult.findUnique({ where: { id: parseInt(aptitudeResultId) } });
+                } else {
+                    // Fallback 1: Use Supabase directly for speed
+                    const { data } = await supabase
+                        .from('aptitude_results')
+                        .select('*')
+                        .eq('id', parseInt(aptitudeResultId))
+                        .single();
+
+                    if (data) {
+                        // Map to camelCase if needed, though worker checks specific fields usually
+                        aptitudeResult = {
+                            id: data.id,
+                            score: data.score,
+                            correctCount: data.correct_count,
+                            totalCount: data.total_count,
+                            answers: data.answers
+                        };
+                    }
+                }
+            } catch (e) {
+                console.warn("[Worker] Failed to fetch aptitude result safely:", e);
+            }
         }
 
-        if (!aptitudeResult) {
-            console.warn(`[Worker] Aptitude Result not found for ${candidate.fullName}. Proceeding with partial data.`);
-        }
+        console.log(`[Worker] Processing ${candidate.fullName}...`);
 
-        console.log(`[Worker] Analyzing: ${candidate.fullName}`);
+        // LAZY LOAD DEPENDENCIES (To save memory)
+        const { analyzeCandidate } = require('./aiAnalysis');
+        const pdfParse = require('pdf-parse');
+        const { downloadFromDrive, createFolder, uploadToDrive } = require('./googleDrive');
+        const { generateBiodataPDF, generateAnalysisPDF } = require('./reportGenerator');
+        const { mergePDFs } = require('./pdfMerger');
+        const { sendNotification } = require('./whatsapp');
+        const { getSettings } = require('./settings');
+        const fs = require('fs');
+        const path = require('path');
+        const os = require('os');
 
         // A. Get OCR Text
         let cvText = candidate.cvText;
         if (!cvText || cvText.length < 50) {
             try {
-                console.log("[Worker] CV Text missing in DB, trying to fetch...");
+                console.log("[Worker] CV Text missing, trying to fetch...");
                 let buffer = null;
                 if (candidate.cvDriveId) {
                     buffer = await downloadFromDrive(candidate.cvDriveId);
@@ -71,22 +82,24 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
                 if (buffer) {
                     const data = await pdfParse(buffer);
                     cvText = data.text;
+                    // Update Candidate
                     await prisma.candidate.update({
                         where: { id: candidate.id },
                         data: { cvText: cvText }
                     });
                 }
             } catch (e) {
-                console.error("[Worker] OCR Retry Failed:", e.message);
+                console.error("[Worker] OCR Retry Failed:", e);
             }
         }
 
         // B. AI Analysis
         let analysisData;
         try {
+            console.log("[Worker] Running AI Analysis...");
             analysisData = await analyzeCandidate(candidate, cvText || "No CV Text", candidate.discResult || {}, aptitudeResult);
         } catch (err) {
-            console.error("[Worker] Analysis Failed:", err);
+            console.error("[Worker] AI Analysis Failed:", err);
             analysisData = {
                 matchScore: 0,
                 content: "AI Analysis Failed. Error: " + err.message,
@@ -96,6 +109,7 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
         }
 
         // C. Save Analysis
+        console.log("[Worker] Saving Analysis to DB...");
         await prisma.analysis.create({
             data: {
                 candidateId: parseInt(candidateId),
@@ -109,21 +123,23 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
                 personalDataScore: analysisData.details?.personalDataScore || 0
             }
         });
-        console.log(`[Worker] Analysis saved for ${candidate.fullName}`);
 
-        // D. Integrations (Sheets & WhatsApp)
+        // D. Integrations
         try {
+            const { appendToSheet } = require('./googleSheets');
             await appendToSheet({ ...candidate, discResult: candidate.discResult }, analysisData);
-        } catch (sheetErr) { console.warn("[Worker] Google Sheet failed:", sheetErr.message); }
+            console.log("[Worker] Google Sheet updated.");
+        } catch (sheetErr) { console.warn("[Worker] Google Sheet warning:", sheetErr.message); }
 
         try {
             const settings = await getSettings();
             await sendNotification({ ...candidate, discResult: candidate.discResult }, analysisData, settings);
-        } catch (waErr) { console.warn("[Worker] WhatsApp failed:", waErr.message); }
+            console.log("[Worker] WhatsApp notification sent.");
+        } catch (waErr) { console.warn("[Worker] WhatsApp warning:", waErr.message); }
 
         // E. Generate MERGED Report PDF
         try {
-            console.log("[Worker] Generating and Merging Full Report...");
+            console.log("[Worker] Generating Reports...");
 
             const candidateDataForReport = {
                 ...candidate,
@@ -134,7 +150,7 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
             // Part A: Biodata
             const biodataPdfBuffer = await generateBiodataPDF(candidateDataForReport);
 
-            // Part C: Analysis (DISC + Aptitude + AI)
+            // Part C: Analysis
             const analysisPdfBuffer = await generateAnalysisPDF(
                 candidateDataForReport,
                 candidate.discResult,
@@ -142,12 +158,12 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
                 analysisData
             );
 
-            // Part B: Original CV (Download)
+            // Part B: Original CV
             let originalCvBuffer = null;
             if (candidate.cvDriveId) {
                 try {
                     originalCvBuffer = await downloadFromDrive(candidate.cvDriveId);
-                } catch (dlErr) { console.error("Could not download CV from Drive:", dlErr.message); }
+                } catch (dlErr) { console.error("[Worker] CV Download failed:", dlErr.message); }
             } else if (candidate.cvUrl) {
                 try {
                     const urlParts = candidate.cvUrl.split('/resumes/');
@@ -155,7 +171,7 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
                         const { data: blob } = await supabase.storage.from('resumes').download(urlParts[1]);
                         if (blob) originalCvBuffer = Buffer.from(await blob.arrayBuffer());
                     }
-                } catch (sbErr) { console.error("Could not download CV from Supabase:", sbErr.message); }
+                } catch (sbErr) { console.error("[Worker] CV Download from storage failed:", sbErr.message); }
             }
 
             // Merge
@@ -167,33 +183,32 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
             try {
                 finalPdfBuffer = await mergePDFs(buffersToMerge);
             } catch (mergeErr) {
-                console.error("[Worker] Merge Failed. Fallback to Biodata + Analysis.", mergeErr.message);
+                console.error("[Worker] Merge Failed, falling back...", mergeErr.message);
                 finalPdfBuffer = await mergePDFs([biodataPdfBuffer, analysisPdfBuffer]);
             }
 
-            // Upload to Drive
+            // Upload
             const folderName = `${candidate.fullName} - ${candidate.position || 'Applicant'}`;
             const folderId = await createFolder(folderName);
             const finalFileName = `Full Report - ${candidate.fullName}.pdf`;
 
-            // Write to TEMP before upload
-            const tempPath = path.join(require('os').tmpdir(), finalFileName);
+            const tempPath = path.join(os.tmpdir(), finalFileName);
             fs.writeFileSync(tempPath, finalPdfBuffer);
 
             await uploadToDrive(tempPath, finalFileName, folderId);
-            console.log("[Worker] Full Merged Report Uploaded Successfully.");
+            console.log("[Worker] PDF Report Generated and Uploaded.");
 
             fs.unlinkSync(tempPath);
 
         } catch (e) {
-            console.error("[Worker] Report Generation/Merge failed", e);
+            console.error("[Worker] Report Generation failed:", e);
         }
 
-        console.log(`[Worker] Job Complete for ${candidate.fullName}`);
+        console.log("[Worker] Job Completed Successfully.");
         return { success: true };
 
     } catch (error) {
-        console.error("[Worker] Fatal Error:", error);
+        console.error("[Worker] Critical Error:", error);
         return { success: false, error: error.message };
     }
 }

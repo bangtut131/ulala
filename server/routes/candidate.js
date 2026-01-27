@@ -278,19 +278,45 @@ router.post('/:id/aptitude', async (req, res) => {
         });
 
         // 2. Trigger AI Analysis (BACKGROUND PROCESS)
-        // Reverted to direct in-process call as background function was unreliable.
-        // This relies on the server staying alive long enough to complete.
+        // Fire-and-forget: Return response immediately to prevent timeout
+        // 2. Trigger AI Analysis (BACKGROUND PROCESS)
+        // Strategy: 
+        // If Local -> Function Call directly (Async)
+        // If Netlify -> Fetch Background Function URL (Async)
+
+        const isNetlify = process.env.NETLIFY || process.env.URL?.includes('netlify');
+        const siteUrl = process.env.URL || 'http://localhost:8888';
 
         (async () => {
             const { runAnalysis } = require('../services/analysisWorker');
-            console.log(`[Trigger] Running Analysis for ${id} (In-Process)`);
 
-            // We await it here only inside the async wrapper. 
-            // The main response (res.json) below fires immediately.
-            try {
-                await runAnalysis(parseInt(id), aptitudeResult.id);
-            } catch (e) {
-                console.error("[Trigger] Analysis Failed:", e);
+            if (isNetlify) {
+                try {
+                    const bgUrl = `${siteUrl}/.netlify/functions/analysis-background`;
+                    console.log(`[Trigger] Calling Background Function: ${bgUrl}`);
+
+                    // Fire and forget fetch
+                    // We don't await the result here so we can reply to frontend fast.
+                    // The background function will handle the await.
+                    fetch(bgUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            candidateId: parseInt(id),
+                            aptitudeResultId: aptitudeResult.id
+                        })
+                    }).then(res => {
+                        console.log(`[Trigger] Background Response: ${res.status}`);
+                    }).catch(err => console.error("[Trigger] Background Fetch Error:", err));
+
+                } catch (e) {
+                    console.error("[Trigger] Trigger Logic Failed:", e);
+                    // Fallback: Try direct execution just in case
+                    runAnalysis(parseInt(id), aptitudeResult.id);
+                }
+            } else {
+                console.log("[Trigger] Running Analysis Locally (Direct Call)...");
+                runAnalysis(parseInt(id), aptitudeResult.id);
             }
         })();
 
