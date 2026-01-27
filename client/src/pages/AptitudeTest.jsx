@@ -117,7 +117,7 @@ export default function AptitudeTest() {
             }
         }
 
-        navigate('/complete', { state: { candidateId } });
+        navigate('/complete');
     }
 
     const handleSubmit = async () => {
@@ -194,7 +194,7 @@ export default function AptitudeTest() {
 
                         {question.sheetImage && (
                             <div className="mb-8 p-4 bg-white rounded-xl border-4 border-slate-700 text-center relative group">
-                                <div className="absolute top-2 left-2 px-2 py-1 bg-black/70 text-white text-xs rounded">Gambar Soal (Lihat Referensi)</div>
+
                                 <img
                                     src={question.sheetImage}
                                     alt="Reference Problem"

@@ -1,23 +1,8 @@
-import React, { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Completion() {
     const navigate = useNavigate();
-    const location = useLocation();
-    const candidateId = location.state?.candidateId;
-
-    useEffect(() => {
-        if (candidateId) {
-            // FIRE AND FORGET (SILENT)
-            // We initiate the analysis but don't force the user to wait for it visually.
-            // If they stay on the page for ~5-10s, it completes reliably.
-            // If they close immediately, the "Regenerate" button in Admin is the fallback.
-            console.log("Triggering silent analysis...");
-            fetch(`/api/candidates/${candidateId}/analyze`, {
-                method: 'POST'
-            }).catch(err => console.error("Silent analysis failed (tab closed?):", err));
-        }
-    }, [candidateId]);
 
     return (
         <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">

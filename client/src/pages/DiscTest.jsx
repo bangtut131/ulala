@@ -204,12 +204,12 @@ export default function DiscTest() {
 
                 <div className="grid grid-cols-1 gap-4 mb-10">
                     {question.options.map((opt, idx) => (
-                        <div key={idx} className={`group relative flex items-center justify-between p-5 rounded-2xl border transition-all duration-300 ${currentAnswer.most === opt.type || currentAnswer.least === opt.type
+                        <div key={idx} className={`group relative flex flex-col md:flex-row items-center justify-between p-5 gap-4 md:gap-0 rounded-2xl border transition-all duration-300 ${currentAnswer.most === opt.type || currentAnswer.least === opt.type
                             ? 'bg-slate-800/60 border-gama-500/30'
                             : 'bg-slate-800/30 border-white/5 hover:border-white/10 hover:bg-slate-800/50'
                             }`}>
 
-                            <span className={`text-lg font-medium transition-colors ${currentAnswer.most === opt.type ? 'text-gama-400' :
+                            <span className={`text-lg font-medium transition-colors text-center md:text-left ${currentAnswer.most === opt.type ? 'text-gama-400' :
                                 currentAnswer.least === opt.type ? 'text-red-400' : 'text-slate-300'
                                 }`}>
                                 {opt.word}

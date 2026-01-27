@@ -51,123 +51,180 @@ router.post('/', upload.single('cv'), async (req, res) => {
         }
 
         console.log(`Received application from ${fullName} for ${position} (VacID: ${vacancyId})`);
+        console.log("DEBUG PAYLOAD:", JSON.stringify(req.body)); // Debug missing fields
 
-        // --- PARALLEL PROCESSING START ---
-        // We run Supabase Upload, Google Drive Upload, and OCR concurrently to save time.
+        // 1. Upload to Supabase Storage
+        const fileExt = path.extname(file.originalname);
+        const fileName = `${Date.now()}_${fullName.replace(/\s+/g, '_')}${fileExt}`;
 
-        // Task A: Supabase Upload (Critical for initial file URL)
-        const taskSupabase = (async () => {
-            const fileExt = path.extname(file.originalname);
-            const fileName = `${Date.now()}_${fullName.replace(/\s+/g, '_')}${fileExt}`;
+        const { data: storageData, error: storageError } = await supabaseAdmin
+            .storage
+            .from('resumes')
+            .upload(fileName, file.buffer, {
+                contentType: file.mimetype,
+                upsert: false
+            });
 
-            const { data, error } = await supabaseAdmin.storage
-                .from('resumes')
-                .upload(fileName, file.buffer, {
-                    contentType: file.mimetype,
-                    upsert: false
-                });
-
-            if (error) {
-                console.error("Supabase Upload Error:", error);
-                throw error;
-            }
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('resumes')
-                .getPublicUrl(fileName);
-
-            return { url: publicUrl, fileName };
-        })();
-
-        // Task B: Google Drive Upload (Optional - Fail safe)
-        const taskDrive = (async () => {
-            try {
-                // Lazy Load
-                const { createFolder, uploadToDrive } = require('../services/googleDrive');
-                const tempDir = require('os').tmpdir();
-                // Unique temp file to prevent collisions in parallel execution
-                const tempFilePath = path.join(tempDir, `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.pdf`);
-                fs.writeFileSync(tempFilePath, file.buffer);
-
-                const folderName = `${fullName} - ${position || 'Applicant'}`;
-                const driveFolderId = await createFolder(folderName);
-                if (!driveFolderId) console.warn("Using Root Drive Folder");
-
-                const driveFileName = `CV - ${fullName}.pdf`;
-                const driveResult = await uploadToDrive(tempFilePath, driveFileName, driveFolderId);
-
-                fs.unlinkSync(tempFilePath); // Cleanup
-
-                if (driveResult && driveResult.id && !driveResult.error) {
-                    return { id: driveResult.id, webViewLink: driveResult.webViewLink };
-                }
-                return null;
-            } catch (e) {
-                console.warn("Drive Task Failed:", e.message);
-                return null;
-            }
-        })();
-
-        // Task C: OCR (Optional - Fail safe)
-        const taskOCR = (async () => {
-            try {
-                const pdfParse = require('pdf-parse');
-                const data = await pdfParse(file.buffer);
-                console.log("OCR Success, text length:", data.text.length);
-                return data.text;
-            } catch (e) {
-                console.warn("OCR Task Failed:", e.message);
-                return "[OCR Failed: " + e.message + "]";
-            }
-        })();
-
-        // AWAIT ALL TASKS
-        // If Supabase fails, the whole request fails (caught by main catch). 
-        // Drive and OCR handle their own errors and return null/string.
-        const [supabaseResult, driveResult, cvText] = await Promise.all([
-            taskSupabase,
-            taskDrive,
-            taskOCR
-        ]);
-
-        let finalCvUrl = supabaseResult.url;
-        let driveId = null;
-
-        if (driveResult) {
-            driveId = driveResult.id;
-            if (driveResult.webViewLink) finalCvUrl = driveResult.webViewLink;
-
-            // Delete from Supabase Storage if Drive success (Space saving)
-            // Fire-and-forget to not block response
-            if (!driveId.toString().startsWith('mock_')) {
-                supabaseAdmin.storage
-                    .from('resumes')
-                    .remove([supabaseResult.fileName])
-                    .then(() => console.log(`[Cleanup] Deleted ${supabaseResult.fileName} from Supabase`))
-                    .catch(e => console.error("[Cleanup Warning]", e));
-            }
+        if (storageError) {
+            console.error("Supabase Storage Upload Error:", storageError);
+            throw storageError;
         }
 
-        // --- SINGLE DATABASE INSERT ---
-        // Create candidate with ALL data populated at once.
+        const { data: { publicUrl: supabaseUrl } } = supabase
+            .storage
+            .from('resumes')
+            .getPublicUrl(fileName);
+
+        let finalCvUrl = supabaseUrl;
+
+        // 2. Upload to Google Drive (Folder Based)
+        let driveId = null;
+        let driveFolderId = null;
+
+        // LAZY LOAD
+        const { createFolder, uploadToDrive } = require('../services/googleDrive');
+        const pdfParse = require('pdf-parse');
+
+        try {
+            // Write buffer to temp file for Drive upload
+            const tempDir = require('os').tmpdir();
+            const tempFilePath = path.join(tempDir, fileName);
+            fs.writeFileSync(tempFilePath, file.buffer);
+
+            // A. Create/Get Folder
+            const folderName = `${fullName} - ${position || 'Applicant'}`;
+            driveFolderId = await createFolder(folderName);
+
+            if (!driveFolderId) {
+                console.warn("Using Root Drive Folder (Folder creation failed)");
+            }
+
+            // B. Upload CV to that Folder
+            // Clean filename for Drive (remove timestamp if desired, or keep it)
+            // User requested: "1. File pdf cv kandidat" - Let's keep it clear
+            const driveFileName = `CV - ${fullName}.pdf`;
+
+            const driveResult = await uploadToDrive(tempFilePath, driveFileName, driveFolderId);
+
+            if (driveResult && driveResult.id && !driveResult.error) {
+                driveId = driveResult.id;
+                // Use Drive View Link if available
+                if (driveResult.webViewLink) {
+                    finalCvUrl = driveResult.webViewLink;
+                }
+
+                // Delete from Supabase Storage if successful (Space saving)
+                if (!driveId.toString().startsWith('mock_')) {
+                    console.log(`[Storage] Drive Upload Success (ID: ${driveId}). Deleting ${fileName} from Supabase...`);
+                    // supabaseAdmin.storage.from('resumes').remove([fileName]); // Async cleanup
+                }
+            } else {
+                console.warn("Google Drive Upload Incomplete:", driveResult.error || "No ID returned");
+            }
+
+            // Cleanup
+            fs.unlinkSync(tempFilePath);
+        } catch (driveErr) {
+            console.warn("Google Drive Upload Skipped:", driveErr.message);
+        }
+
+        // 3. Save to Database
         const candidate = await prisma.candidate.create({
             data: {
-                fullName, email, phone, position, religion, bloodType, address,
-                nik, simOwnership, simNumber, medicalHistory,
+                fullName,
+                email,
+                phone,
+                position,
+                religion,
+                bloodType,
+                address,
+
+                // NEW FIELDS
+                nik,
+                simOwnership,
+                simNumber,
+                medicalHistory,
                 experience: experience ? (typeof experience === 'string' ? JSON.parse(experience) : experience) : [],
                 education: education ? (typeof education === 'string' ? JSON.parse(education) : education) : [],
+
+                cvUrl: finalCvUrl,
+                cvDriveId: driveId || null,
                 strengths: strengths ? (typeof strengths === 'string' ? JSON.parse(strengths) : strengths) : [],
                 weaknesses: weaknesses ? (typeof weaknesses === 'string' ? JSON.parse(weaknesses) : weaknesses) : [],
                 biggestAchievement,
-                otherInfo,
-                vacancyId,
-
-                // DATA FROM PARALLEL TASKS
-                cvUrl: finalCvUrl,
-                cvDriveId: driveId || null,
-                cvText: cvText || ""
+                vacancyId // Pass it
             }
         });
+
+        // --- NEW: Generate & Upload Biodata PDF (Using Service) ---
+        // --- NEW: Generate & Upload Biodata PDF (Using Service) ---
+        // DISABLED per User Request (Only 2 files: Original CV + Full Merged Report)
+        /*
+        try {
+            console.log("Generating Biodata PDF for:", fullName);
+
+            // 1. Generate Buffer
+            const biodataBuffer = await generateBiodataPDF({
+                fullName, email, phone, position, religion, bloodType, address,
+                nik, simOwnership, simNumber, medicalHistory,
+                biggestAchievement, strengths, weaknesses
+            });
+
+            // 2. Save to Temp
+            const biodataFileName = `Biodata - ${fullName} - ${position || 'Candidate'}.pdf`;
+            const tempDir = require('os').tmpdir();
+            const biodataPath = path.join(tempDir, biodataFileName);
+            fs.writeFileSync(biodataPath, biodataBuffer);
+
+            // 3. Upload to SAME Folder
+            // Re-use driveFolderId from above if available
+            console.log("Uploading Biodata PDF to Drive Folder:", driveFolderId);
+            const bioUpload = await uploadToDrive(biodataPath, biodataFileName, driveFolderId); // Pass folderId
+
+            if (bioUpload.error) {
+                console.warn("DATA LOSS WARNING: Biodata PDF failed to upload to Drive:", bioUpload.error);
+            } else {
+                console.log("Biodata PDF uploaded successfully. ID:", bioUpload.id);
+            }
+
+            fs.unlinkSync(biodataPath);
+
+        } catch (bioErr) {
+            console.error("Biodata Generation/Upload Failed:", bioErr.message);
+        }
+        */
+
+        // --- SYNCHRONOUS PROCESSING (Required for Netlify/Serverless) ---
+        // We must await this because Netlify freezes the function immediately after res.json()
+        try {
+            // 3. OCR (Using Memory Buffer)
+            console.log("Starting OCR for candidate:", candidate.fullName);
+            let cvText = "";
+            try {
+                // Ensure buffer is available
+                if (file.buffer) {
+                    const data = await pdfParse(file.buffer);
+                    cvText = data.text;
+                    console.log("OCR Success, text length:", cvText.length);
+
+                    // Update Candidate with extracted Text
+                    await prisma.candidate.update({
+                        where: { id: candidate.id },
+                        data: { cvText: cvText }
+                    });
+                }
+            } catch (e) {
+                console.error("OCR Failed:", e);
+                cvText = "[OCR Failed: " + e.message + "]";
+            }
+
+            // Note: We are NOT running full AI Analysis here anymore because it requires DISC results first.
+            // The AI Analysis is triggered in the NEXT step (POST /:id/disc).
+            // This endpoint only handles the INITIAL application (Personal Data + CV).
+
+        } catch (err) {
+            console.error("Processing error:", err);
+        }
 
         res.json({ success: true, candidateId: candidate.id });
 
@@ -203,7 +260,7 @@ router.post('/:id/disc', async (req, res) => {
     }
 });
 
-// POST /api/candidates/:id/aptitude - Submit Aptitude Result
+// POST /api/candidates/:id/aptitude - Submit Aptitude Result & Trigger Final AI Analysis
 router.post('/:id/aptitude', async (req, res) => {
     try {
         const { id } = req.params;
@@ -220,57 +277,195 @@ router.post('/:id/aptitude', async (req, res) => {
             }
         });
 
-        // 2. NO BACKGROUND PROCESS HERE ANYMORE
-        // Analysis is now triggered explicitly by the client via /api/candidates/:id/analyze
-        // to prevent timeout issues in serverless environments.
+        // 2. Trigger AI Analysis (BACKGROUND PROCESS)
+        // Fire-and-forget: Return response immediately to prevent timeout
+        (async () => {
+            try {
+                // Use Admin Privilege to ensure we get DISC/Aptitude results even if RLS hides them
+                const candidate = await prisma.candidate.findUnique({
+                    where: { id: parseInt(id) },
+                    useAdmin: true
+                });
 
-        res.json({ success: true, message: 'Test submitted' });
+                if (candidate) {
+                    console.log(`Starting Final Deep Analysis for ${candidate.fullName}...`);
+
+                    // LAZY LOAD DEPENDENCIES
+                    const { analyzeCandidate } = require('../services/aiAnalysis');
+                    const pdfParse = require('pdf-parse');
+                    const { downloadFromDrive, createFolder, uploadToDrive } = require('../services/googleDrive');
+                    const { generateBiodataPDF, generateAnalysisPDF } = require('../services/reportGenerator');
+                    const { mergePDFs } = require('../services/pdfMerger');
+                    const { sendNotification } = require('../services/whatsapp');
+                    const { getSettings } = require('../services/settings');
+
+                    // A. Get OCR Text
+                    let cvText = candidate.cvText;
+                    if (!cvText || cvText.length < 50) {
+                        try {
+                            console.log("CV Text missing in DB, trying to fetch...");
+                            let buffer = null;
+                            if (candidate.cvDriveId) {
+                                const { downloadFromDrive } = require('../services/googleDrive');
+                                buffer = await downloadFromDrive(candidate.cvDriveId);
+                            } else if (candidate.cvUrl) {
+                                const urlParts = candidate.cvUrl.split('/resumes/');
+                                if (urlParts.length > 1) {
+                                    const { data: blob } = await supabase.storage.from('resumes').download(urlParts[1]);
+                                    if (blob) buffer = Buffer.from(await blob.arrayBuffer());
+                                }
+                            }
+
+                            if (buffer) {
+                                const data = await pdfParse(buffer);
+                                cvText = data.text;
+                                await prisma.candidate.update({
+                                    where: { id: candidate.id },
+                                    data: { cvText: cvText }
+                                });
+                            }
+                        } catch (e) {
+                            console.error("OCR Retry Failed:", e);
+                        }
+                    }
+
+                    // B. AI Analysis
+                    let analysisData;
+                    try {
+                        analysisData = await analyzeCandidate(candidate, cvText || "No CV Text", candidate.discResult || {}, aptitudeResult);
+                    } catch (err) {
+                        console.error("Analysis Failed:", err);
+                        analysisData = {
+                            matchScore: 0,
+                            content: "AI Analysis Failed. Error: " + err.message,
+                            verdict: "Error",
+                            details: {}
+                        };
+                    }
+
+                    // C. Save Analysis
+                    await prisma.analysis.create({
+                        data: {
+                            candidateId: parseInt(id),
+                            matchScore: analysisData.matchScore,
+                            content: analysisData.content,
+                            verdict: analysisData.verdict,
+                            ocrText: cvText ? cvText.substring(0, 5000) : '',
+                            cvScore: analysisData.details?.cvScore || 0,
+                            discScore: analysisData.details?.discScore || 0,
+                            aptitudeScore: analysisData.details?.aptitudeScore || 0,
+                            personalDataScore: analysisData.details?.personalDataScore || 0
+                        }
+                    });
+                    console.log(`Analysis saved for ${candidate.fullName}`);
+
+                    // D. Integrations (Sheets & WhatsApp)
+                    try {
+                        const { appendToSheet } = require('../services/googleSheets');
+                        await appendToSheet({ ...candidate, discResult: candidate.discResult }, analysisData);
+                    } catch (sheetErr) { console.warn("Google Sheet failed:", sheetErr.message); }
+
+                    try {
+                        const { getSettings } = require('../services/settings');
+                        const { sendNotification } = require('../services/whatsapp');
+                        const settings = await getSettings();
+                        await sendNotification({ ...candidate, discResult: candidate.discResult }, analysisData, settings);
+                    } catch (waErr) { console.warn("WhatsApp failed:", waErr.message); }
+
+                    // E. Generate MERGED Report PDF
+                    try {
+                        console.log("Generating and Merging Full Report...");
+
+                        // 1. Generate Parts
+                        // Note: formatting candidate data for generator
+                        const candidateDataForReport = {
+                            ...candidate,
+                            strengths: typeof candidate.strengths === 'string' ? JSON.parse(candidate.strengths) : candidate.strengths,
+                            weaknesses: typeof candidate.weaknesses === 'string' ? JSON.parse(candidate.weaknesses) : candidate.weaknesses
+                        };
+
+                        const { generateBiodataPDF, generateAnalysisPDF } = require('../services/reportGenerator');
+
+                        // Part A: Biodata
+                        const biodataPdfBuffer = await generateBiodataPDF(candidateDataForReport);
+
+                        // Part C: Analysis (DISC + Aptitude + AI)
+                        const analysisPdfBuffer = await generateAnalysisPDF(
+                            candidateDataForReport,
+                            candidate.discResult,
+                            aptitudeResult,
+                            analysisData
+                        );
+
+                        // Part B: Original CV (Download)
+                        let originalCvBuffer = null;
+                        if (candidate.cvDriveId) {
+                            try {
+                                originalCvBuffer = await downloadFromDrive(candidate.cvDriveId);
+                                console.log("Downloaded Original CV from Drive for Merging.");
+                            } catch (dlErr) { console.error("Could not download CV from Drive:", dlErr.message); }
+                        } else if (candidate.cvUrl) {
+                            try {
+                                const urlParts = candidate.cvUrl.split('/resumes/');
+                                if (urlParts.length > 1) {
+                                    const { data: blob } = await supabase.storage.from('resumes').download(urlParts[1]);
+                                    if (blob) originalCvBuffer = Buffer.from(await blob.arrayBuffer());
+                                }
+                            } catch (sbErr) { console.error("Could not download CV from Supabase:", sbErr.message); }
+                        }
+
+                        // 3. Merge: [Biodata] + [CV] + [Analysis]
+                        const { mergePDFs } = require('../services/pdfMerger');
+                        const buffersToMerge = [biodataPdfBuffer];
+
+                        if (originalCvBuffer) {
+                            console.log("Adding Original CV to merge list...");
+                            buffersToMerge.push(originalCvBuffer);
+                        } else {
+                            console.warn("Original CV buffer missing, skipping CV in report.");
+                        }
+
+                        buffersToMerge.push(analysisPdfBuffer);
+
+                        let finalPdfBuffer = null;
+                        try {
+                            finalPdfBuffer = await mergePDFs(buffersToMerge);
+                        } catch (mergeErr) {
+                            console.error("Merge Failed (likely corrupt CV PDF). Fallback to Biodata + Analysis.", mergeErr.message);
+                            // Fallback: Skip CV
+                            finalPdfBuffer = await mergePDFs([biodataPdfBuffer, analysisPdfBuffer]);
+                        }
+
+                        // 4. Upload to Drive (In the User's Folder)
+                        // Ensure folder structure is correct.
+                        // We need the folder ID. We can try to find or create.
+                        const folderName = `${candidate.fullName} - ${candidate.position || 'Applicant'}`;
+                        const folderId = await createFolder(folderName);
+
+                        const finalFileName = `Full Report - ${candidate.fullName}.pdf`;
+                        const tempPath = path.join(require('os').tmpdir(), finalFileName);
+                        fs.writeFileSync(tempPath, finalPdfBuffer);
+
+                        await uploadToDrive(tempPath, finalFileName, folderId);
+                        console.log("Full Merged Report Uploaded Successfully.");
+
+                        fs.unlinkSync(tempPath);
+
+                    } catch (e) {
+                        console.error("Report Generation/Merge failed", e);
+                    }
+                }
+            } catch (bgError) {
+                console.error("Background Analysis Error:", bgError);
+            }
+        })();
+
+        // Return immediately
+        res.json({ success: true, message: 'Test submitted, analysis processing in background' });
 
     } catch (error) {
         console.error('Error submitting Aptitude:', error);
         res.status(500).json({ error: 'Internal Server Error' });
-    }
-});
-
-// POST /api/candidates/:id/analyze - Trigger AI Analysis
-// Optimized: Triggers Netlify Background Function for robust processing
-router.post('/:id/analyze', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const candidateId = parseInt(id);
-
-        console.log(`[Analyze] Triggering analysis for Candidate ID: ${candidateId}`);
-
-        // Define Background Function URL
-        // In local: http://localhost:8888/.netlify/functions/process-analysis-background
-        // In prod: process.env.URL + /.netlify/functions/process-analysis-background
-        const baseUrl = process.env.URL || 'http://localhost:8888';
-        const bgFunctionUrl = `${baseUrl}/.netlify/functions/process-analysis-background`;
-
-        console.log(`[Analyze] Delegating to Background Worker: ${bgFunctionUrl}`);
-
-        // Fire and Forget fetch to the background function
-        // We do NOT await the result because the background function might take 15 mins.
-        // We just want to make sure it received the request.
-
-        // Note: fetch is available globally in Node 18+ which Netlify uses default now.
-        // If older node, consider installing node-fetch.
-        try {
-            fetch(bgFunctionUrl, {
-                method: 'POST',
-                body: JSON.stringify({ candidateId }),
-                headers: { 'Content-Type': 'application/json' }
-            }).catch(err => console.error("Failed to trigger background function:", err));
-        } catch (e) {
-            console.error("Fetch implementation issue:", e);
-        }
-
-        // Return immediately to the client
-        res.json({ success: true, message: 'Analysis queued in background.' });
-
-    } catch (error) {
-        console.error("Analysis Endpoint Error:", error);
-        res.status(500).json({ error: error.message });
     }
 });
 

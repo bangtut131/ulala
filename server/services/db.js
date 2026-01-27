@@ -337,15 +337,13 @@ const db = {
             };
         },
         findMany: async () => {
-            // OPTIMIZED QUERY: Exclude heavy fields (cv_text, analyses.content, analyses.ocr_text)
-            // Select only what is needed for the dashboard cards/table
             const { data, error } = await supabase
                 .from('candidates')
                 .select(`
-                    id, full_name, email, phone, position, cv_url, photo_url, status, created_at, request_id,
-                    disc_results:disc_results!fk_disc_candidate (profile),
-                    analyses:analyses!fk_analyses_candidate (match_score, verdict),
-                    aptitude_results:aptitude_results!fk_aptitude_candidate (score)
+                    *,
+                    disc_results:disc_results!fk_disc_candidate (*),
+                    analyses:analyses!fk_analyses_candidate (*),
+                    aptitude_results:aptitude_results!fk_aptitude_candidate (*)
                 `)
                 .order('created_at', { ascending: false });
 
@@ -359,9 +357,8 @@ const db = {
                 // Helper to get first item or object
                 const getRelation = (rel) => Array.isArray(rel) ? rel[0] : rel;
 
-                const disc = getRelation(c.disc_results);
+                const disc = getRelation(c.disc_results); // Mapped via alias
                 const analysis = getRelation(c.analyses);
-                const apt = getRelation(c.aptitude_results);
 
                 return {
                     id: c.id,
@@ -369,20 +366,47 @@ const db = {
                     email: c.email,
                     phone: c.phone,
                     position: c.position,
+                    religion: c.religion,
+                    bloodType: c.blood_type,
+                    address: c.address,
                     cvUrl: c.cv_url,
                     photoUrl: c.photo_url,
                     status: c.status,
+                    cvText: c.cv_text,
                     createdAt: c.created_at,
-                    request_id: c.request_id,
+                    request_id: c.request_id, // Ensure request_id is passed to frontend
 
-                    // Summarized results for Dashboard
-                    discResult: disc ? { profile: disc.profile } : null,
+                    // Map new fields
+                    nik: c.nik,
+                    simOwnership: c.sim_ownership,
+                    simNumber: c.sim_number,
+                    experience: c.experience,
+                    education: c.education,
+                    // Flattening related data for dashboard compatibility
+                    discResult: disc ? {
+                        profile: disc.profile,
+                        dScore: disc.d_score,
+                        iScore: disc.i_score,
+                        sScore: disc.s_score,
+                        cScore: disc.c_score,
+                        fullResult: disc.full_result
+                    } : null,
                     analysis: analysis ? {
                         matchScore: analysis.match_score,
-                        verdict: analysis.verdict
+                        verdict: analysis.verdict,
+                        content: analysis.content, // AI Analysis Text
+                        ocrText: analysis.ocr_text, // OCR Text
+                        // NEW Detailed Scores
+                        cvScore: analysis.cv_score,
+                        discScore: analysis.disc_score,
+                        aptitudeScore: analysis.aptitude_score,
+                        personalDataScore: analysis.personal_data_score
                     } : null,
-                    aptitudeResult: apt ? {
-                        score: apt.score
+                    aptitudeResult: c.aptitude_results && c.aptitude_results.length > 0 ? {
+                        score: c.aptitude_results[0].score,
+                        correctCount: c.aptitude_results[0].correct_count,
+                        totalCount: c.aptitude_results[0].total_count,
+                        answers: c.aptitude_results[0].answers
                     } : null
                 };
             });
