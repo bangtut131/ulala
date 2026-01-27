@@ -220,10 +220,13 @@ router.post('/', upload.single('cv'), async (req, res) => {
                     cvText = data.text;
                     console.log("OCR Success, text length:", cvText.length);
 
-                    // Update Candidate with extracted Text
+                    // Update Candidate with extracted Text AND Log
                     await prisma.candidate.update({
                         where: { id: candidate.id },
-                        data: { cvText: cvText }
+                        data: {
+                            cvText: cvText,
+                            otherInfo: (candidate.otherInfo || "") + `\n[Log] OCR Success (${cvText.length} chars).`
+                        }
                     });
                 }
             } catch (e) {
@@ -297,6 +300,13 @@ router.post('/:id/aptitude', async (req, res) => {
         // Strategy: Fire-and-forget sync call. Server stays alive, so this is safe and fast.
 
         console.log("[Trigger] Starting Analysis (Background)...");
+
+        // Log trigger start to DB
+        await db.candidate.update({
+            where: { id: parseInt(id) },
+            data: { otherInfo: (await db.candidate.findUnique({ where: { id: parseInt(id) } })).otherInfo + "\n[Trigger] Aptitude Submitted. Starting Worker..." }
+        });
+
         const { runAnalysis } = require('../services/analysisWorker');
 
         // Non-blocking call
