@@ -448,6 +448,7 @@ const db = {
             if (data.medicalHistory) payload.medical_history = data.medicalHistory;
             if (data.experience) payload.experience = data.experience;
             if (data.education) payload.education = data.education;
+            if (data.otherInfo) payload.other_info = data.otherInfo; // IMPORTANT: Map camelCase to snake_case for logging
 
             const { data: updated, error } = await supabase
                 .from('candidates')
