@@ -93,13 +93,11 @@ const db = {
                 return [];
             }
 
-            // Fetch counts manually (or via subquery if robust, but manual is easier here)
-            // Get all unique Manpower IDs
+            // Fetch counts manually
+            // 1. Assigned Candidates (by request_id)
             const mpIds = [...new Set(data.map(v => v.manpower_request_id).filter(id => id))];
-
-            // Count candidates for these MPs
-            // Using RPC or raw query is best, but let's do simple multiple fetch or one grouped fetch
             let counts = {};
+
             if (mpIds.length > 0) {
                 const { data: cCounts, error: cErr } = await client
                     .from('candidates')
@@ -110,6 +108,30 @@ const db = {
                     cCounts.forEach(c => {
                         counts[c.request_id] = (counts[c.request_id] || 0) + 1;
                     });
+                }
+            }
+
+            // 2. Unassigned Candidates (by vacancy_id)
+            // Note: This requires 'vacancy_id' column in candidates table.
+            const vacIds = data.map(v => v.id);
+            let vacCounts = {};
+
+            if (vacIds.length > 0) {
+                try {
+                    const { data: vData, error: vErr } = await client
+                        .from('candidates')
+                        .select('vacancy_id')
+                        .in('vacancy_id', vacIds)
+                        .is('request_id', null); // Only count unassigned
+
+                    if (!vErr && vData) {
+                        vData.forEach(c => {
+                            if (c.vacancy_id) vacCounts[c.vacancy_id] = (vacCounts[c.vacancy_id] || 0) + 1;
+                        });
+                    }
+                } catch (e) {
+                    // Ignore error if column missing in legacy DB
+                    console.warn("Vacancy Count ignored (Schema mismatch?)", e.message);
                 }
             }
 
@@ -135,7 +157,8 @@ const db = {
                 expiresAt: v.expires_at,
                 isActive: v.is_active,
                 viewsCount: v.views_count,
-                applicantsCount: counts[v.manpower_request_id] || 0 // Added Count
+                // Sum assigned + unassigned applicants
+                applicantsCount: (counts[v.manpower_request_id] || 0) + (vacCounts[v.id] || 0)
             }));
         },
         findUnique: async ({ where }) => {
@@ -150,13 +173,6 @@ const db = {
             // Increment view count if it's a public fetch (we can optimize this later)
             if (where.incrementView) {
                 await supabase.rpc('increment_vacancy_view', { row_id: where.id });
-                // Or simple update if RPC not exists, but RPC is safer for concurrency. 
-                // For now, let's just ignore view count increment implementation detail or do simple update
-                /*
-                await supabaseAdmin.from('job_vacancies')
-                   .update({ views_count: data.views_count + 1 })
-                   .eq('id', where.id);
-                */
             }
 
             return {
@@ -222,7 +238,8 @@ const db = {
                 weaknesses: data.weaknesses,
                 biggest_achievement: data.biggestAchievement,
 
-                request_id: requestId // Save the link
+                request_id: requestId, // Save the link (nullable)
+                vacancy_id: data.vacancyId // Save source vacancy for counters
             };
 
             console.log("DEBUG DB PAYLOAD:", JSON.stringify(payload)); // Check what is sent to Supabase
