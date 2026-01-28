@@ -315,17 +315,7 @@ router.post('/:id/aptitude', async (req, res) => {
         console.log("[Trigger] Starting Analysis (Background)...");
 
         // Log trigger start to DB
-        try {
-            const candidateForLog = await db.candidate.findUnique({ where: { id: parseInt(id) }, useAdmin: true });
-            if (candidateForLog) {
-                await db.candidate.update({
-                    where: { id: parseInt(id) },
-                    data: { otherInfo: (candidateForLog.otherInfo || "") + "\n[Trigger] Aptitude Submitted. Starting Worker..." }
-                });
-            }
-        } catch (logErr) {
-            console.warn("[Trigger] Failed to log start to DB:", logErr.message);
-        }
+        // [Trigger Logging Removed for Speed] - Worker logs its own start.
 
         const { runAnalysis } = require('../services/analysisWorker');
 
