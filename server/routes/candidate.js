@@ -331,6 +331,61 @@ router.post('/:id/aptitude', async (req, res) => {
     }
 });
 
+// POST /api/candidates/:id/analysis/trigger - Manual Trigger for AI Analysis (Admin)
+router.post('/:id/analysis/trigger', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`[Manual Trigger] Request received for Candidate ${id}`);
+
+        // 1. Fetch Candidate to check exist
+        const candidate = await prisma.candidate.findUnique({
+            where: { id: parseInt(id) },
+            useAdmin: true
+        });
+
+        if (!candidate) return res.status(404).json({ error: "Candidate not found" });
+
+        // 2. Find latest Aptitude Result
+        // Since findUnique wrapper maps it, we can check candidate.aptitudeResult or query directly.
+        // Let's query directly to be sure we get the ID.
+        // Fix: db.aptitudeResult.findMany isn't fully implemented in wrapper for filtering by candidateId easily without where clause support?
+        // Wrapper findMany sucks. Let's use supabase directly or assume relation exists.
+        // Actually, let's just pass null if not found, but it's better to have it.
+
+        let aptitudeResultId = null;
+        if (candidate.aptitudeResult && candidate.aptitudeResult.id) {
+            aptitudeResultId = candidate.aptitudeResult.id;
+        } else {
+            // Try to find via raw query if wrapper didn't return ID (wrapper maps to score/count)
+            const { data: aptData } = await supabaseAdmin
+                .from('aptitude_results')
+                .select('id')
+                .eq('candidate_id', parseInt(id))
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+            if (aptData) aptitudeResultId = aptData.id;
+        }
+
+        console.log(`[Manual Trigger] Found Aptitude ID: ${aptitudeResultId}`);
+
+        // 3. Run Analysis (AWAIT it this time so Admin sees the result)
+        const { runAnalysis } = require('../services/analysisWorker');
+        const result = await runAnalysis(parseInt(id), aptitudeResultId);
+
+        if (result.success) {
+            res.json({ success: true, message: "Analysis regenerated successfully." });
+        } else {
+            res.status(500).json({ error: "Analysis failed: " + result.error });
+        }
+
+    } catch (error) {
+        console.error("[Manual Trigger] Error:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+
 // DELETE /api/candidates/:id - Delete Candidate
 router.delete('/:id', async (req, res) => {
     try {

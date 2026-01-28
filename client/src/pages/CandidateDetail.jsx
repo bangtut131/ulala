@@ -248,9 +248,39 @@ export default function CandidateDetail() {
 
                         {/* Right Column: AI Analysis & OCR */}
                         <div className="p-8 col-span-2 bg-slate-900/20">
-                            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                <span className="text-xl">✨</span> Analisa AI
-                            </h3>
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                    <span className="text-xl">✨</span> Analisa AI
+                                </h3>
+                                <button
+                                    onClick={async () => {
+                                        if (!window.confirm("Regenerate AI Analysis? This will overwrite existing results.")) return;
+                                        setLoading(true); // Re-use loading or create local one? Local is better for UX but global is safer.
+                                        // Let's use a local loading state or toast, but for simplicity, re-fetch data behaves like reloading
+                                        try {
+                                            const token = localStorage.getItem('adminToken');
+                                            const res = await fetch(`/api/candidates/${candidate.id}/analysis/trigger`, {
+                                                method: 'POST',
+                                                headers: { 'Authorization': `Bearer ${token}` }
+                                            });
+                                            if (res.ok) {
+                                                alert("Analysis Regenerated Successfully!");
+                                                window.location.reload(); // Quick refresh
+                                            } else {
+                                                const err = await res.json();
+                                                alert("Failed: " + err.error);
+                                            }
+                                        } catch (e) {
+                                            alert("Error: " + e.message);
+                                        } finally {
+                                            setLoading(false);
+                                        }
+                                    }}
+                                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded shadow transition"
+                                >
+                                    ↻ Regenerate
+                                </button>
+                            </div>
 
                             {/* Weighted Score Breakdown */}
                             <div className="bg-slate-800/80 rounded-xl border border-white/10 mb-8 overflow-hidden">
