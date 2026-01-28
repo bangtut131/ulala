@@ -232,6 +232,19 @@ router.post('/', upload.single('cv'), async (req, res) => {
             } catch (e) {
                 console.error("OCR Failed:", e);
                 cvText = "[OCR Failed: " + e.message + "]";
+
+                // Log failure to DB so we know it happened
+                try {
+                    await prisma.candidate.update({
+                        where: { id: candidate.id },
+                        data: {
+                            cvText: cvText,
+                            otherInfo: (candidate.otherInfo || "") + `\n[Error] OCR Failed: ${e.message}`
+                        }
+                    });
+                } catch (dbErr) {
+                    console.error("Failed to log OCR error:", dbErr);
+                }
             }
 
             // Note: We are NOT running full AI Analysis here anymore because it requires DISC results first.
@@ -302,10 +315,17 @@ router.post('/:id/aptitude', async (req, res) => {
         console.log("[Trigger] Starting Analysis (Background)...");
 
         // Log trigger start to DB
-        await db.candidate.update({
-            where: { id: parseInt(id) },
-            data: { otherInfo: (await db.candidate.findUnique({ where: { id: parseInt(id) } })).otherInfo + "\n[Trigger] Aptitude Submitted. Starting Worker..." }
-        });
+        try {
+            const candidateForLog = await db.candidate.findUnique({ where: { id: parseInt(id) }, useAdmin: true });
+            if (candidateForLog) {
+                await db.candidate.update({
+                    where: { id: parseInt(id) },
+                    data: { otherInfo: (candidateForLog.otherInfo || "") + "\n[Trigger] Aptitude Submitted. Starting Worker..." }
+                });
+            }
+        } catch (logErr) {
+            console.warn("[Trigger] Failed to log start to DB:", logErr.message);
+        }
 
         const { runAnalysis } = require('../services/analysisWorker');
 

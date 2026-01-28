@@ -65,9 +65,9 @@ const db = {
             if (error) throw error;
             return { success: true };
         },
-        findMany: async ({ where } = {}) => {
+        findMany: async ({ where, useAdmin = false } = {}) => {
             // Use Admin client if requested to bypass RLS
-            const client = (where && where.isAdmin) ? supabaseAdmin : supabase;
+            const client = (useAdmin || (where && where.isAdmin)) ? supabaseAdmin : supabase;
 
             let query = client
                 .from('job_vacancies')
@@ -356,8 +356,10 @@ const db = {
                 } : null
             };
         },
-        findMany: async () => {
-            const { data, error } = await supabase
+        findMany: async ({ where, useAdmin = false } = {}) => {
+            const client = (useAdmin || (where && where.isAdmin)) ? supabaseAdmin : supabase;
+
+            const { data, error } = await client
                 .from('candidates')
                 .select(`
                     *,
@@ -450,7 +452,7 @@ const db = {
             if (data.education) payload.education = data.education;
             if (data.otherInfo) payload.other_info = data.otherInfo; // IMPORTANT: Map camelCase to snake_case for logging
 
-            const { data: updated, error } = await supabase
+            const { data: updated, error } = await supabaseAdmin
                 .from('candidates')
                 .update(payload)
                 .eq('id', where.id)
@@ -466,7 +468,7 @@ const db = {
         },
         delete: async ({ where }) => {
             // Cascade delete handled by DB constraints ideally, but we call delete on candidate
-            const { error } = await supabase
+            const { error } = await supabaseAdmin
                 .from('candidates')
                 .delete()
                 .eq('id', where.id);
