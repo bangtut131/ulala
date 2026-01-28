@@ -13,7 +13,9 @@ const { appendToSheet } = require('../services/googleSheets');
 // const pdfParse = require('pdf-parse');
 // const { createFolder, uploadToDrive, downloadFromDrive } = require('../services/googleDrive');
 // const { generateBiodataPDF, generateFullReport } = require('../services/reportGenerator');
-// const { mergePDFs } = require('../services/pdfMerger');
+// const { generateBiodataPDF, generateFullReport } = require('../services/reportGenerator');
+const { mergePDFs } = require('../services/pdfMerger');
+const { runAnalysis } = require('../services/analysisWorker');
 
 const fs = require('fs');
 
@@ -307,22 +309,18 @@ router.post('/:id/aptitude', async (req, res) => {
         });
 
         // 2. Trigger AI Analysis (BACKGROUND PROCESS)
-        // Fire-and-forget: Return response immediately to prevent timeout
-        // 2. Trigger AI Analysis (BACKGROUND PROCESS)
         // Platform: Railway (Persistent Server)
-        // Strategy: Fire-and-forget sync call. Server stays alive, so this is safe and fast.
+        // Strategy: Detach from request loop using setTimeout
 
-        console.log("[Trigger] Starting Analysis (Background)...");
+        console.log(`[Trigger] Route received submission for ${id}. Scheduling Worker...`);
 
-        // Log trigger start to DB
-        // [Trigger Logging Removed for Speed] - Worker logs its own start.
-
-        const { runAnalysis } = require('../services/analysisWorker');
-
-        // Non-blocking call
-        runAnalysis(parseInt(id), aptitudeResult.id).catch(err => {
-            console.error("[Trigger] Analysis Error:", err);
-        });
+        // Detach execution to ensure response isn't blocked AND process continues even if res closes
+        setTimeout(() => {
+            console.log(`[Background] Executing analysis for ${id}...`);
+            runAnalysis(parseInt(id), aptitudeResult.id)
+                .then(res => console.log(`[Background] Analysis finished for ${id}:`, res))
+                .catch(err => console.error(`[Background] Analysis crashed for ${id}:`, err));
+        }, 500); // 500ms delay to ensure transaction committed and connection free
 
         // Return immediately
         res.json({ success: true, message: 'Test submitted, analysis processing in background' });
