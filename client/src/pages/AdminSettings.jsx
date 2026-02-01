@@ -292,15 +292,19 @@ export default function AdminSettings() {
                                 />
                             </div>
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-slate-300 mb-1">HR Phone Number (Receiver)</label>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">WhatsApp Target (Phone / Group ID)</label>
                                 <input
                                     type="text"
                                     name="hrPhoneNumber"
                                     value={settings.hrPhoneNumber || ''}
                                     onChange={handleChange}
                                     className="input-field"
-                                    placeholder="e.g. 6281234567890 (International Format with Country Code)"
+                                    placeholder="e.g. 62812... (Personal) or 12345...@g.us (Group ID)"
                                 />
+                                <p className="text-xs text-slate-500 mt-1">
+                                    Untuk Group, pastikan menggunakan ID lengkap berakhiran <code>@g.us</code>.
+                                    ID bisa didapat dari metadata Waha atau endpoint sessions.
+                                </p>
                             </div>
                         </div>
                     </div>

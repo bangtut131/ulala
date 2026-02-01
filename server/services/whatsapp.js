@@ -30,7 +30,10 @@ _Please check the admin dashboard for full details._
     `.trim();
 
     try {
-        const chatId = `${hrPhoneNumber.replace('+', '')}@c.us`;
+        // Check if it's a Group ID (contains @) or a Phone Number
+        const chatId = hrPhoneNumber.includes('@')
+            ? hrPhoneNumber
+            : `${hrPhoneNumber.replace('+', '')}@c.us`;
 
         console.log(`Sending WhatsApp notification to ${chatId}...`);
 
