@@ -6,8 +6,9 @@ const fs = require('fs');
  * @param {Object} candidate - Candidate object
  * @param {Object} analysis - Analysis object
  * @param {Object} settings - App settings containing WAHA config
+ * @param {Object} aptitudeResult - Aptitude test result object (optional)
  */
-async function sendNotification(candidate, analysis, settings) {
+async function sendNotification(candidate, analysis, settings, aptitudeResult = null) {
     const { wahaBaseUrl, wahaSessionId, hrPhoneNumber, wahaApiKey } = settings;
 
     if (!wahaBaseUrl || !hrPhoneNumber) {
@@ -15,18 +16,48 @@ async function sendNotification(candidate, analysis, settings) {
         return;
     }
 
+    // Get score details from analysis
+    const cvScore = analysis.details?.cvScore || 0;
+    const discScore = analysis.details?.discScore || 0;
+    const aptitudeScore = analysis.details?.aptitudeScore || 0;
+    const personalDataScore = analysis.details?.personalDataScore || 0;
+
+    // Format aptitude result
+    let aptitudeInfo = '_Tidak tersedia_';
+    if (aptitudeResult) {
+        const aptCategory = aptitudeResult.score > 135 ? 'Tinggi' :
+            (aptitudeResult.score >= 90 ? 'Rata-rata' : 'Rendah');
+        aptitudeInfo = `${aptitudeResult.score} (${aptitudeResult.correctCount}/${aptitudeResult.totalCount} benar) - *${aptCategory}*`;
+    }
+
     const message = `
-*New Candidate Analyzed!* 📄
+*📄 Kandidat Baru Dianalisis!*
 
-*Name:* ${candidate.fullName}
-*Position:* ${candidate.position}
-*Phone:* ${candidate.phone}
+*Nama:* ${candidate.fullName}
+*Posisi:* ${candidate.position}
+*No. HP:* ${candidate.phone}
 
-*AI Match Score:* ${analysis.matchScore}%
-*Verdict:* ${analysis.verdict}
-*DISC Profile:* ${candidate.discResult?.profile || 'N/A'}
+━━━━━━━━━━━━━━━━━━
+*📊 HASIL ANALISIS AI*
+━━━━━━━━━━━━━━━━━━
 
-_Please check the admin dashboard for full details._
+*Total Match Score:* ${analysis.matchScore}%
+*Keputusan:* ${analysis.verdict}
+
+*Rincian Nilai:*
+• CV & Pengalaman: ${cvScore}/100
+• Kecocokan DISC: ${discScore}/100
+• Kemampuan Kognitif: ${aptitudeScore}/100
+• Data Pribadi: ${personalDataScore}/100
+
+━━━━━━━━━━━━━━━━━━
+*🧠 HASIL TES APTITUDE*
+━━━━━━━━━━━━━━━━━━
+• Skor: ${aptitudeInfo}
+
+*Profil DISC:* ${candidate.discResult?.profile || 'N/A'}
+
+_Cek dashboard admin untuk detail lengkap._
     `.trim();
 
     try {

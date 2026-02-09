@@ -152,7 +152,7 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
 
         try {
             const settings = await getSettings();
-            await sendNotification({ ...candidate, discResult: candidate.discResult }, analysisData, settings);
+            await sendNotification({ ...candidate, discResult: candidate.discResult }, analysisData, settings, aptitudeResult);
             console.log("[Worker] WhatsApp notification sent.");
         } catch (waErr) { console.warn("[Worker] WhatsApp warning:", waErr.message); }
 
