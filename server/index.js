@@ -54,6 +54,24 @@ apiRouter.get('/ping', (req, res) => {
     });
 });
 
+apiRouter.get('/keepalive', async (req, res) => {
+    try {
+        const { supabase } = require('./services/supabaseClient');
+        // Simple query to keep Supabase awake
+        const { data, error } = await supabase.from('app_settings').select('id').limit(1);
+        if (error) throw error;
+
+        res.json({
+            status: 'ok',
+            message: 'Supabase connection is active. Keep-alive successful.',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Keepalive ping failed:', error.message);
+        res.status(500).json({ status: 'error', message: 'Keep-alive ping failed' });
+    }
+});
+
 apiRouter.use('/candidates', candidateRoutes);
 apiRouter.use('/settings', settingsRoutes);
 apiRouter.use('/auth', authRoutes); // Admin Auth
@@ -84,6 +102,21 @@ if (require('fs').existsSync(clientBuildPath)) {
 } else {
     console.warn("Client build not found at:", clientBuildPath);
 }
+
+// --- AUTOMATIC KEEPALIVE INTERVAL (For VPS/Railway) ---
+// Supabase free tier pauses after 7 days of inactivity.
+// This pings the DB every 3 days to keep it alive.
+const KEEPALIVE_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000; // 3 Days
+setInterval(async () => {
+    try {
+        console.log('[Keep-Alive] Pinging Supabase to prevent pause...');
+        const { supabase } = require('./services/supabaseClient');
+        await supabase.from('app_settings').select('id').limit(1);
+        console.log('[Keep-Alive] Ping successful.');
+    } catch (e) {
+        console.error('[Keep-Alive] Ping failed:', e.message);
+    }
+}, KEEPALIVE_INTERVAL_MS);
 
 // Only listen if run directly (not imported as a function)
 if (require.main === module) {
