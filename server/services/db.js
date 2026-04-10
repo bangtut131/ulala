@@ -193,6 +193,15 @@ const db = {
                 viewsCount: data.views_count,
                 imageUrl: data.image_url
             };
+        },
+        delete: async ({ where }) => {
+            const { error } = await supabaseAdmin
+                .from('job_vacancies')
+                .delete()
+                .eq('id', where.id);
+
+            if (error) throw new Error(error.message);
+            return { success: true };
         }
     },
     candidate: {
