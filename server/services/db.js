@@ -195,6 +195,12 @@ const db = {
             };
         },
         delete: async ({ where }) => {
+            // Unlink candidates first to avoid foreign key constraint error
+            await supabaseAdmin
+                .from('candidates')
+                .update({ vacancy_id: null })
+                .eq('vacancy_id', where.id);
+
             const { error } = await supabaseAdmin
                 .from('job_vacancies')
                 .delete()
