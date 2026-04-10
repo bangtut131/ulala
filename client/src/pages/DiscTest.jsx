@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { discQuestions } from '../data/discQuestions';
 import { calculateScores, convertToGraphScale, determinePattern, getAnalysisText, calculateConsistency, getJobRecommendations, generateConclusion, checkValidity } from '../utils/discLogic';
 import { useNavigate, useLocation } from 'react-router-dom';
+import ProctorCamera from '../components/ProctorCamera';
 
 export default function DiscTest() {
     const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -166,6 +167,7 @@ export default function DiscTest() {
 
     return (
         <div className="min-h-screen relative overflow-hidden flex flex-col items-center justify-center p-4 bg-slate-900">
+            {candidateId && <ProctorCamera candidateId={candidateId} phase="disc_test" intervalMs={60000} />}
 
             {/* Dynamic Backgrounds */}
             <div className="absolute inset-0 z-0">

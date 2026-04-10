@@ -249,6 +249,7 @@ const db = {
                 dob: data.dob,
                 emergency_contact: data.emergencyContact,
                 other_info: data.otherInfo,
+                snapshots: typeof data.snapshots === 'string' ? JSON.parse(data.snapshots) : (data.snapshots || []),
 
                 cv_url: data.cvUrl,
                 photo_url: data.photoUrl,
@@ -286,7 +287,8 @@ const db = {
                 photoUrl: newCandidate.photo_url,
                 // Return new fields if needed immediately
                 nik: newCandidate.nik,
-                experience: newCandidate.experience
+                experience: newCandidate.experience,
+                snapshots: newCandidate.snapshots || []
             };
         },
         findUnique: async ({ where, useAdmin = false }) => {
@@ -346,6 +348,7 @@ const db = {
                 dob: data.dob,
                 emergencyContact: data.emergency_contact,
                 otherInfo: data.other_info,
+                snapshots: data.snapshots || [],
 
                 // Relationships
                 discResult: disc ? {
@@ -423,6 +426,7 @@ const db = {
                     simNumber: c.sim_number,
                     experience: c.experience,
                     education: c.education,
+                    snapshots: c.snapshots || [],
                     // Flattening related data for dashboard compatibility
                     discResult: disc ? {
                         profile: disc.profile,
@@ -470,6 +474,7 @@ const db = {
             if (data.experience) payload.experience = data.experience;
             if (data.education) payload.education = data.education;
             if (data.otherInfo) payload.other_info = data.otherInfo; // IMPORTANT: Map camelCase to snake_case for logging
+            if (data.snapshots) payload.snapshots = data.snapshots;
 
             const { data: updated, error } = await supabaseAdmin
                 .from('candidates')

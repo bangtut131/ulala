@@ -336,6 +336,28 @@ export default function CandidateDetail() {
                                 </div>
                             </div>
 
+                            {candidate.snapshots && candidate.snapshots.length > 0 && (
+                                <>
+                                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                        <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
+                                        Proctoring Snapshots
+                                    </h3>
+                                    <div className="bg-slate-800/50 p-5 rounded-xl border border-white/5 mb-8 shadow-inner">
+                                        <div className="flex flex-wrap gap-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                                            {candidate.snapshots.map((snap, idx) => (
+                                                <div key={idx} className="shrink-0 w-32 md:w-40 relative rounded-xl overflow-hidden border border-white/10 group cursor-pointer shadow-lg">
+                                                    <img src={snap} alt={`Snapshot ${idx+1}`} className="w-full h-32 object-cover transition-transform duration-500 group-hover:scale-110" />
+                                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent p-3 pt-6 flex justify-between items-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <span className="text-white text-[10px] uppercase font-bold tracking-wider">#{idx+1}</span>
+                                                        <a href={snap} target="_blank" rel="noreferrer" className="text-[10px] text-blue-400 font-bold uppercase transition-colors hover:text-blue-300">Lihat Penuh &rarr;</a>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
                             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Data CV (OCR)</h3>
                             <div className="bg-black/40 text-slate-400 p-6 rounded-xl border border-white/5 font-mono text-xs overflow-auto max-h-60 shadow-inner mb-8">
                                 <pre className="whitespace-pre-wrap">

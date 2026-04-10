@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import aptitudeQuestions from '../data/aptitudeQuestions.json';
 import { useNavigate, useLocation } from 'react-router-dom';
+import ProctorCamera from '../components/ProctorCamera';
 
 export default function AptitudeTest() {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -137,6 +138,8 @@ export default function AptitudeTest() {
 
     return (
         <div className="min-h-screen bg-slate-900 flex flex-col font-sans text-slate-200">
+            {candidateId && <ProctorCamera candidateId={candidateId} phase="aptitude_test" intervalMs={60000} />}
+
             {/* Hidden Button for Auto Trigger to avoid closure issues in setInterval */}
             <button id="auto-submit-trigger" onClick={handleAutoSubmit} className="hidden"></button>
 

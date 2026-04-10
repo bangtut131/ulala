@@ -10,3 +10,11 @@ CREATE TABLE IF NOT EXISTS aptitude_results (
 
 -- Add index for performance
 CREATE INDEX IF NOT EXISTS idx_aptitude_candidate_id ON aptitude_results(candidate_id);
+
+-- Enable Row Level Security
+ALTER TABLE aptitude_results ENABLE ROW LEVEL SECURITY;
+
+-- Create permissive policy (matching pattern of all other tables)
+CREATE POLICY "Enable all access for all users" ON aptitude_results FOR ALL
+USING (true)
+WITH CHECK (true);

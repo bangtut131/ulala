@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import ProctorCamera from '../components/ProctorCamera';
 
 export default function CandidateForm() {
     const navigate = useNavigate();
@@ -8,6 +9,11 @@ export default function CandidateForm() {
     const [loading, setLoading] = useState(false);
     const [file, setFile] = useState(null);
     const [vacancies, setVacancies] = useState([]);
+    const [snapshots, setSnapshots] = useState([]);
+
+    const handleSnapshot = (dataUrl) => {
+        setSnapshots(prev => [...prev, dataUrl]);
+    };
 
     useEffect(() => {
         const fetchVacancies = async () => {
@@ -104,6 +110,9 @@ export default function CandidateForm() {
         });
 
         if (file) data.append('cv', file);
+        if (snapshots.length > 0) {
+            data.append('snapshots', JSON.stringify(snapshots));
+        }
 
         // Find vacancy ID based on selected position if not explicitly set
         // (This handles case where user changes dropdown or comes directly)
@@ -191,6 +200,8 @@ export default function CandidateForm() {
 
     return (
         <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4 bg-slate-900">
+            <ProctorCamera onCapture={handleSnapshot} phase="biodata" intervalMs={45000} />
+            
             {/* Dynamic Backgrounds */}
             <div className="absolute inset-0 z-0">
                 <div className="absolute top-10 right-10 w-96 h-96 bg-gama-600/10 rounded-full blur-[100px] animate-pulse-slow"></div>

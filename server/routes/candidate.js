@@ -36,7 +36,8 @@ router.post('/', upload.single('cv'), async (req, res) => {
             experience, education, // Arrays
             strengths, weaknesses, biggestAchievement, otherInfo,
             // Rels
-            vacancyId
+            vacancyId,
+            snapshots
         } = req.body;
         const file = req.file;
 
@@ -89,6 +90,43 @@ router.post('/', upload.single('cv'), async (req, res) => {
             .getPublicUrl(fileName);
 
         let finalCvUrl = supabaseUrl;
+
+        // 1b. Handle Snapshots Upload if any
+        let snapshotUrls = [];
+        if (snapshots) {
+            try {
+                const parsedSnapshots = JSON.parse(snapshots); // Array of base64 strings
+                if (Array.isArray(parsedSnapshots) && parsedSnapshots.length > 0) {
+                    console.log(`Processing ${parsedSnapshots.length} base64 snapshots...`);
+                    const uploadPromises = parsedSnapshots.map(async (base64Str, idx) => {
+                        const matches = base64Str.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+                        if (!matches || matches.length !== 3) return null;
+                        
+                        const mimeType = matches[1];
+                        const buffer = Buffer.from(matches[2], 'base64');
+                        const fileExt = mimeType.split('/')[1] || 'webp';
+                        const snapFileName = `${Date.now()}_${fullName.replace(/\s+/g, '_')}_snap_${idx}.${fileExt}`;
+
+                        const { error: snapError } = await supabaseAdmin.storage
+                            .from('candidate-snapshots')
+                            .upload(snapFileName, buffer, { contentType: mimeType, upsert: false });
+
+                        if (snapError) { console.error("Snapshot error:", snapError); return null; }
+
+                        const { data: { publicUrl } } = supabase.storage
+                            .from('candidate-snapshots')
+                            .getPublicUrl(snapFileName);
+                            
+                        return publicUrl;
+                    });
+                    
+                    const urls = await Promise.all(uploadPromises);
+                    snapshotUrls = urls.filter(url => url !== null);
+                }
+            } catch (snapErr) {
+                console.error("Error processing inline snapshots:", snapErr);
+            }
+        }
 
         // 2. Upload to Google Drive (Folder Based)
         let driveId = null;
@@ -166,6 +204,7 @@ router.post('/', upload.single('cv'), async (req, res) => {
                 weaknesses: weaknesses ? (typeof weaknesses === 'string' ? JSON.parse(weaknesses) : weaknesses) : [],
                 biggestAchievement,
                 vacancyId, // Pass it
+                snapshots: snapshotUrls,
                 // Log metadata
                 otherInfo: (otherInfo || "") + `\n[Meta] Device Upload: ${file.mimetype} (${(file.size / 1024).toFixed(1)}KB)`
             }
@@ -478,6 +517,51 @@ router.post('/:id/link-request', async (req, res) => {
     } catch (error) {
         console.error('Error linking request:', error);
         res.status(500).json({ error: 'Error linking request' });
+    }
+});
+
+// POST /api/candidates/:id/snapshot - Upload live snapshot
+router.post('/:id/snapshot', express.json({limit: '20mb'}), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { imageBase64, phase } = req.body;
+
+        if (!imageBase64) return res.status(400).json({ error: "No image provided" });
+
+        const matches = imageBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) return res.status(400).json({ error: "Invalid base64" });
+
+        const mimeType = matches[1];
+        const buffer = Buffer.from(matches[2], 'base64');
+        const fileExt = mimeType.split('/')[1] || 'webp';
+        const fileName = `${Date.now()}_cid_${id}_${phase || 'test'}.${fileExt}`;
+
+        const { error: storageError } = await supabaseAdmin.storage
+            .from('candidate-snapshots')
+            .upload(fileName, buffer, { contentType: mimeType, upsert: false });
+
+        if (storageError) throw storageError;
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('candidate-snapshots')
+            .getPublicUrl(fileName);
+
+        // Fetch candidate to update array
+        const candidate = await db.candidate.findUnique({ where: { id: parseInt(id) }, useAdmin: true });
+        if (!candidate) throw new Error("Candidate not found");
+
+        const existingSnapshots = Array.isArray(candidate.snapshots) ? candidate.snapshots : [];
+        existingSnapshots.push(publicUrl);
+
+        await db.candidate.update({
+            where: { id: parseInt(id) },
+            data: { snapshots: existingSnapshots }
+        });
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error uploading live snapshot:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
