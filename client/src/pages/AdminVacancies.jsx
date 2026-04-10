@@ -17,8 +17,11 @@ const AdminVacancies = () => {
         type: 'Full-time',
         salaryRange: '',
         expiresAt: '',
-        isActive: true
+        isActive: true,
+        imageUrl: ''
     });
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
 
     const navigate = useNavigate();
 
@@ -53,8 +56,11 @@ const AdminVacancies = () => {
             type: vacancy.type,
             salaryRange: vacancy.salaryRange || '',
             expiresAt: vacancy.expiresAt ? vacancy.expiresAt.split('T')[0] : '',
-            isActive: vacancy.isActive
+            isActive: vacancy.isActive,
+            imageUrl: vacancy.imageUrl || ''
         });
+        setImagePreview(vacancy.imageUrl || null);
+        setImageFile(null);
         setIsEditing(true);
         setShowModal(true);
     };
@@ -89,6 +95,23 @@ const AdminVacancies = () => {
                 payload.expiresAt = new Date(payload.expiresAt).toISOString();
             }
 
+            // Upload image if present
+            if (imageFile) {
+                const imgFormData = new FormData();
+                imgFormData.append('image', imageFile);
+                const imgRes = await fetch('/api/vacancies/upload-image', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: imgFormData
+                });
+                if (imgRes.ok) {
+                    const imgData = await imgRes.json();
+                    payload.imageUrl = imgData.imageUrl;
+                } else {
+                    console.error('Image upload failed');
+                }
+            }
+
             const res = await fetch(url, {
                 method,
                 headers: {
@@ -110,8 +133,11 @@ const AdminVacancies = () => {
                     type: 'Full-time',
                     salaryRange: '',
                     expiresAt: '',
-                    isActive: true
+                    isActive: true,
+                    imageUrl: ''
                 });
+                setImageFile(null);
+                setImagePreview(null);
                 setIsEditing(false);
                 setSelectedVacancy(null);
             }
@@ -138,8 +164,11 @@ const AdminVacancies = () => {
                             type: 'Full-time',
                             salaryRange: '',
                             expiresAt: '',
-                            isActive: true
+                            isActive: true,
+                            imageUrl: ''
                         });
+                        setImageFile(null);
+                        setImagePreview(null);
                         setShowModal(true);
                     }}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold shadow-lg"
@@ -164,8 +193,15 @@ const AdminVacancies = () => {
                         {vacancies.map(v => (
                             <tr key={v.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="p-4">
-                                    <div className="font-bold text-gray-900">{v.title}</div>
-                                    <div className="text-xs text-gray-500">{v.location} • {v.type}</div>
+                                    <div className="flex items-center gap-3">
+                                        {v.imageUrl && (
+                                            <img src={v.imageUrl} alt={v.title} className="w-12 h-12 rounded-lg object-cover bg-gray-100 flex-shrink-0" />
+                                        )}
+                                        <div>
+                                            <div className="font-bold text-gray-900">{v.title}</div>
+                                            <div className="text-xs text-gray-500">{v.location} • {v.type}</div>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td className="p-4">
                                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${v.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -247,6 +283,52 @@ const AdminVacancies = () => {
                                         <span className="text-gray-900 font-medium">Active</span>
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Image Upload/Preview */}
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Gambar Lowongan (Opsional)</label>
+                                
+                                {imagePreview ? (
+                                    <div className="mb-3 relative group w-max">
+                                        <img src={imagePreview} alt="Vacancy Preview" className="max-h-48 rounded-lg object-cover shadow-sm" />
+                                        <button 
+                                            type="button" 
+                                            onClick={() => {
+                                                setImagePreview(null);
+                                                setImageFile(null);
+                                                setFormData({...formData, imageUrl: null});
+                                            }}
+                                            className="absolute top-2 right-2 bg-red-500 text-white rounded-md px-2 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            Hapus
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="mb-3 text-sm text-gray-500 italic">
+                                        Belum ada gambar yang dipilih. Tersedia di Career Portal jika di-upload.
+                                    </div>
+                                )}
+                                
+                                <label className="inline-block cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-2 rounded-lg text-sm transition-colors">
+                                    {imagePreview ? 'Ganti Gambar' : 'Upload Gambar'}
+                                    <input 
+                                        type="file" 
+                                        className="hidden" 
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (file) {
+                                                if (file.size > 5 * 1024 * 1024) {
+                                                    alert('Ukuran file maksimal 5MB');
+                                                    return;
+                                                }
+                                                setImageFile(file);
+                                                setImagePreview(URL.createObjectURL(file));
+                                            }
+                                        }}
+                                    />
+                                </label>
                             </div>
 
                             <div className="flex justify-end gap-3 mt-6 pt-6 border-t">

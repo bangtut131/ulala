@@ -34,6 +34,8 @@ const PortalDashboard = () => {
         yearsOfExperience: '1 Tahun', // Default
         otherQualifications: ''
     });
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
     const [divisions, setDivisions] = useState([]);
 
     useEffect(() => {
@@ -95,6 +97,25 @@ const PortalDashboard = () => {
         setIsSubmitting(true);
         try {
             const token = localStorage.getItem('portalToken');
+
+            // Upload image first if selected
+            let imageUrl = null;
+            if (imageFile) {
+                const imgFormData = new FormData();
+                imgFormData.append('image', imageFile);
+                const imgRes = await fetch('/api/manpower/upload-image', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: imgFormData
+                });
+                if (imgRes.ok) {
+                    const imgData = await imgRes.json();
+                    imageUrl = imgData.imageUrl;
+                } else {
+                    console.error('Image upload failed');
+                }
+            }
+
             // Prepare payload
             const payload = {
                 ...formData,
@@ -104,7 +125,8 @@ const PortalDashboard = () => {
                 // For 'requirements' field (legacy), we can compose a string just in case
                 requirements: `Education: ${formData.educationLevel} ${formData.educationMajor}\nExperience: ${formData.yearsOfExperience}\nOther: ${formData.otherQualifications}`,
                 // If custom level is selected, use that
-                positionLevel: formData.positionLevel === 'Other' ? formData.customPositionLevel : formData.positionLevel
+                positionLevel: formData.positionLevel === 'Other' ? formData.customPositionLevel : formData.positionLevel,
+                imageUrl: imageUrl
             };
 
             const res = await fetch('/api/manpower', {
@@ -135,6 +157,8 @@ const PortalDashboard = () => {
                     yearsOfExperience: '1 Tahun',
                     otherQualifications: ''
                 });
+                setImageFile(null);
+                setImagePreview(null);
             }
         } catch (error) {
             console.error(error);
@@ -508,6 +532,58 @@ const PortalDashboard = () => {
                                 </div>
                             </div>
 
+                            {/* Image Upload */}
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-1">Gambar Lowongan (Opsional)</label>
+                                <div className="flex items-center gap-4">
+                                    <label className="flex-1 cursor-pointer">
+                                        <div className={`border-2 border-dashed rounded-xl p-4 text-center transition-all hover:border-blue-500/50 ${
+                                            imagePreview ? 'border-blue-500/30 bg-blue-500/5' : 'border-white/10'
+                                        }`}>
+                                            {imagePreview ? (
+                                                <div className="relative">
+                                                    <img src={imagePreview} alt="Preview" className="max-h-32 mx-auto rounded-lg object-cover" />
+                                                    <p className="text-xs text-gray-400 mt-2">Klik untuk ganti gambar</p>
+                                                </div>
+                                            ) : (
+                                                <div className="py-4">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 mx-auto text-gray-500 mb-2">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
+                                                    </svg>
+                                                    <p className="text-sm text-gray-400">Upload gambar poster / banner lowongan</p>
+                                                    <p className="text-xs text-gray-500 mt-1">Max 5MB • JPG, PNG, WebP</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                const file = e.target.files[0];
+                                                if (file) {
+                                                    if (file.size > 5 * 1024 * 1024) {
+                                                        alert('Ukuran file maksimal 5MB');
+                                                        return;
+                                                    }
+                                                    setImageFile(file);
+                                                    setImagePreview(URL.createObjectURL(file));
+                                                }
+                                            }}
+                                        />
+                                    </label>
+                                    {imagePreview && (
+                                        <button
+                                            type="button"
+                                            onClick={() => { setImageFile(null); setImagePreview(null); }}
+                                            className="px-3 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg text-sm font-semibold transition-all"
+                                        >
+                                            Hapus
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
                             <button
                                 type="submit"
                                 disabled={isSubmitting}
@@ -611,6 +687,21 @@ const PortalDashboard = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Attached Image */}
+                            {selectedRequest.imageUrl && (
+                                <div>
+                                    <h4 className="text-lg font-bold text-white mb-2">Gambar Lowongan</h4>
+                                    <div className="bg-black/20 p-4 rounded-xl border border-white/5">
+                                        <img
+                                            src={selectedRequest.imageUrl}
+                                            alt="Gambar Lowongan"
+                                            className="max-h-64 rounded-lg object-cover mx-auto"
+                                            onError={(e) => e.target.style.display = 'none'}
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="p-6 border-t border-white/10 bg-white/5 flex justify-end">

@@ -15,7 +15,8 @@ const db = {
                 salary_range: data.salaryRange,
                 posted_at: new Date().toISOString(),
                 expires_at: data.expiresAt,
-                is_active: data.isActive !== undefined ? data.isActive : true
+                is_active: data.isActive !== undefined ? data.isActive : true,
+                image_url: data.imageUrl || null
             };
 
             const { data: vacancy, error } = await supabaseAdmin
@@ -46,6 +47,7 @@ const db = {
             if (data.salaryRange) payload.salary_range = data.salaryRange;
             if (data.expiresAt) payload.expires_at = data.expiresAt;
             if (data.isActive !== undefined) payload.is_active = data.isActive;
+            if (data.imageUrl !== undefined) payload.image_url = data.imageUrl;
 
             const { data: updated, error } = await supabaseAdmin
                 .from('job_vacancies')
@@ -157,6 +159,7 @@ const db = {
                 expiresAt: v.expires_at,
                 isActive: v.is_active,
                 viewsCount: v.views_count,
+                imageUrl: v.image_url,
                 // Sum assigned + unassigned applicants
                 applicantsCount: (counts[v.manpower_request_id] || 0) + (vacCounts[v.id] || 0)
             }));
@@ -187,7 +190,8 @@ const db = {
                 postedAt: data.posted_at,
                 expiresAt: data.expires_at,
                 isActive: data.is_active,
-                viewsCount: data.views_count
+                viewsCount: data.views_count,
+                imageUrl: data.image_url
             };
         }
     },
@@ -550,7 +554,8 @@ const db = {
                 status: data.status || 'Pending',
                 priority: data.priority || 'Normal',
                 requester_name: data.requesterName,
-                user_id: data.userId
+                user_id: data.userId,
+                image_url: data.imageUrl || null
             };
 
             const { data: request, error } = await supabase
@@ -574,7 +579,8 @@ const db = {
                 status: request.status,
                 priority: request.priority,
                 requesterName: request.requester_name,
-                createdAt: request.created_at
+                createdAt: request.created_at,
+                imageUrl: request.image_url
             };
         },
         findMany: async ({ where } = {}) => {
@@ -651,6 +657,7 @@ const db = {
                     hiredCount: hiredCount,
                     rejectionReason: r.rejection_reason,
                     candidateStats: stats, // Return aggregated stats
+                    imageUrl: r.image_url,
                     // Optionally pass candidate list if needed
                     candidates: r.candidates
                 };
@@ -686,7 +693,8 @@ const db = {
                 requesterName: data.requester_name,
                 userId: data.user_id, // Important for ownership check
                 createdAt: data.created_at,
-                rejectionReason: data.rejection_reason
+                rejectionReason: data.rejection_reason,
+                imageUrl: data.image_url
             };
         },
         update: async ({ where, data }) => {
@@ -698,6 +706,7 @@ const db = {
             }
             if (data.rejectionReason) payload.rejection_reason = data.rejectionReason;
             if (data.quantity) payload.quantity = data.quantity;
+            if (data.imageUrl !== undefined) payload.image_url = data.imageUrl;
             // Add other fields as needed
 
             const { data: updated, error } = await supabaseAdmin

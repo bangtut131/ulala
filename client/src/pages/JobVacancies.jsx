@@ -143,6 +143,12 @@ const JobVacancies = () => {
                             >
                                 <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
+                                {vacancy.imageUrl && (
+                                    <div className="h-40 w-full overflow-hidden">
+                                        <img src={vacancy.imageUrl} alt={vacancy.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                    </div>
+                                )}
+
                                 <div className="p-8 flex-grow">
                                     <div className="flex justify-between items-start mb-4">
                                         <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase ${vacancy.type === 'Full-time' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
@@ -243,7 +249,13 @@ const JobVacancies = () => {
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                             </button>
 
-                            <div className="prose prose-blue max-w-none">
+                            {selectedVacancy.imageUrl && (
+                                <div className="w-full h-64 mb-8 rounded-2xl overflow-hidden shadow-sm mt-8">
+                                    <img src={selectedVacancy.imageUrl} alt={selectedVacancy.title} className="w-full h-full object-cover" />
+                                </div>
+                            )}
+
+                            <div className="prose prose-blue max-w-none mt-8">
                                 <h3 className="text-xl font-bold text-gray-900 mb-4 border-l-4 border-blue-500 pl-4">Deskripsi Pekerjaan</h3>
                                 <div className="text-gray-600 mb-8 leading-relaxed whitespace-pre-line">
                                     {selectedVacancy.description}

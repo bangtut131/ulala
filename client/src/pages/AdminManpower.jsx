@@ -12,19 +12,42 @@ const AdminManpower = () => {
         title: '',
         description: '',
         requirements: '',
-        expiresAt: ''
+        expiresAt: '',
+        imageUrl: ''
     });
+    const [publishImageFile, setPublishImageFile] = useState(null);
+    const [publishImagePreview, setPublishImagePreview] = useState(null);
 
     const handlePublish = async () => {
         try {
             const token = localStorage.getItem('adminToken');
+            
+            // Upload new image if selected
+            let finalImageUrl = publishFormData.imageUrl;
+            if (publishImageFile) {
+                const imgFormData = new FormData();
+                imgFormData.append('image', publishImageFile);
+                const imgRes = await fetch('/api/vacancies/upload-image', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: imgFormData
+                });
+                if (imgRes.ok) {
+                    const imgData = await imgRes.json();
+                    finalImageUrl = imgData.imageUrl;
+                } else {
+                    console.error('Image upload failed');
+                }
+            }
+
             const payload = {
                 manpowerRequestId: selectedRequest.id,
                 title: publishFormData.title,
                 description: publishFormData.description,
                 requirements: publishFormData.requirements,
                 expiresAt: publishFormData.expiresAt ? new Date(publishFormData.expiresAt).toISOString() : null,
-                isActive: true
+                isActive: true,
+                imageUrl: finalImageUrl
             };
 
             const res = await fetch('/api/vacancies', {
@@ -149,6 +172,8 @@ const AdminManpower = () => {
         setIsRejectModalOpen(false);
         setIsPublishModalOpen(false);
         setRejectionReason('');
+        setPublishImageFile(null);
+        setPublishImagePreview(null);
     };
 
     return (
@@ -233,8 +258,11 @@ const AdminManpower = () => {
                                                         title: req.position,
                                                         description: req.jobDescription || '',
                                                         requirements: `Qualifications:\n${req.educationQualification || '-'}\n\nExperience:\n${req.yearsOfExperience || '-'}\n\nOther:\n${req.otherQualifications || req.requirements || '-'}`,
-                                                        expiresAt: ''
+                                                        expiresAt: '',
+                                                        imageUrl: req.imageUrl || null
                                                     });
+                                                    setPublishImagePreview(req.imageUrl || null);
+                                                    setPublishImageFile(null);
                                                     setIsPublishModalOpen(true);
                                                 }}
                                                 className="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded text-xs font-bold transition-colors"
@@ -415,6 +443,52 @@ const AdminManpower = () => {
                                     value={publishFormData.expiresAt}
                                     onChange={e => setPublishFormData({ ...publishFormData, expiresAt: e.target.value })}
                                 />
+                            </div>
+
+                            {/* Image Upload/Preview */}
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Gambar Lowongan</label>
+                                
+                                {publishImagePreview ? (
+                                    <div className="mb-3 relative group w-max">
+                                        <img src={publishImagePreview} alt="Vacancy Preview" className="max-h-48 rounded-lg object-cover shadow-sm" />
+                                        <button 
+                                            type="button" 
+                                            onClick={() => {
+                                                setPublishImagePreview(null);
+                                                setPublishImageFile(null);
+                                                setPublishFormData({...publishFormData, imageUrl: null});
+                                            }}
+                                            className="absolute top-2 right-2 bg-red-500 text-white rounded-md px-2 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            Hapus
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="mb-3 text-sm text-gray-500 italic">
+                                        Belum ada gambar yang dipilih. Tersedia di Career Portal jika di-upload.
+                                    </div>
+                                )}
+                                
+                                <label className="inline-block cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-2 rounded-lg text-sm transition-colors">
+                                    {publishImagePreview ? 'Ganti Gambar' : 'Upload Gambar'}
+                                    <input 
+                                        type="file" 
+                                        className="hidden" 
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (file) {
+                                                if (file.size > 5 * 1024 * 1024) {
+                                                    alert('Ukuran file maksimal 5MB');
+                                                    return;
+                                                }
+                                                setPublishImageFile(file);
+                                                setPublishImagePreview(URL.createObjectURL(file));
+                                            }
+                                        }}
+                                    />
+                                </label>
                             </div>
 
                             <div className="mt-8 pt-6 border-t flex justify-end gap-3">
