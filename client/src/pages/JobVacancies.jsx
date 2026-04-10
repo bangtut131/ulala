@@ -250,8 +250,8 @@ const JobVacancies = () => {
                             </button>
 
                             {selectedVacancy.imageUrl && (
-                                <div className="w-full h-64 mb-8 rounded-2xl overflow-hidden shadow-sm mt-8">
-                                    <img src={selectedVacancy.imageUrl} alt={selectedVacancy.title} className="w-full h-full object-cover" />
+                                <div className="w-full mb-8 rounded-2xl overflow-hidden shadow-sm mt-8 bg-black/5 flex justify-center">
+                                    <img src={selectedVacancy.imageUrl} alt={selectedVacancy.title} className="max-w-full h-auto max-h-[600px] object-contain" />
                                 </div>
                             )}
 
