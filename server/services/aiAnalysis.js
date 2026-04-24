@@ -24,6 +24,10 @@ async function analyzeCandidate(candidate, cvText, discResult, aptitudeResult) {
 
   const systemPrompt = settings.systemPrompt || "You are an expert HR assistant. Analyze the candidate based on CV, DISC, and Aptitude Test results.";
 
+  // Determine data availability flags
+  const hasDisc = discResult && discResult.profile;
+  const hasAptitude = aptitudeResult && aptitudeResult.score !== undefined && aptitudeResult.score !== null;
+
   const context = `
         Role Applied For: ${candidate.position || "General Applicant"}
         
@@ -38,7 +42,7 @@ async function analyzeCandidate(candidate, cvText, discResult, aptitudeResult) {
         [PSYCHOMETRIC TEST RESULTS]
         
         1. DISC Profile (Personality):
-        ${discResult ? `
+        ${hasDisc ? `
         - Profile Type: ${discResult.profile} (D:${discResult.dScore}, I:${discResult.iScore}, S:${discResult.sScore}, C:${discResult.cScore})
         ${discResult.fullResult ? `
         - Adapted Pattern (Work): ${discResult.fullResult.profile1?.pattern || '-'}
@@ -46,44 +50,140 @@ async function analyzeCandidate(candidate, cvText, discResult, aptitudeResult) {
         - Consistency Level: ${discResult.fullResult.consistency?.level || '-'} (${discResult.fullResult.consistency?.description || ''})
         - Job Fit Analysis (Based on DISC): ${discResult.fullResult.jobMatch ? discResult.fullResult.jobMatch.join(', ') : '-'}
         - AI Pattern Conclusion: ${discResult.fullResult.conclusion || '-'}
-        ` : ''}` : '- DISC Result Not Available -'}
+        ` : ''}` : '- DISC TEST: BELUM DIKERJAKAN / DATA TIDAK TERSEDIA -'}
 
         2. APTITUDE TEST (Logic & Cognitive):
-        ${aptitudeResult ? `
+        ${hasAptitude ? `
         - Score: ${aptitudeResult.score} (Max Score: 180. Formula: Correct Answers * 3)
         - Correct Answers: ${aptitudeResult.correctCount} / ${aptitudeResult.totalCount}
         - Interpretation Guide:
           * > 135 : High / Superior (More than 45 correct)
           * 90 - 135 : Average / Normal (30 - 45 correct)
           * < 90 : Low / Below Average (Less than 30 correct)
-        ` : '- Aptitude Result Not Available -'}
+        ` : '- APTITUDE TEST: BELUM DIKERJAKAN / DATA TIDAK TERSEDIA -'}
         
         [CV CONTENT (OCR SCAN)]
         ${cvText.substring(0, 4000)}
         `;
 
   const userPrompt = `
-        Please analyze this candidate for the position of "${candidate.position || "Staff"}".
+        Analyze this candidate for the position of "${candidate.position || "Staff"}".
         
-        INSTRUCTIONS FOR SCORING:
-        Evaluate the candidate on 4 specific dimensions (scale 0-100) based on the data provided:
+        =============================================
+        REFERENSI STANDAR POSISI (GUNAKAN SEBAGAI ACUAN PENILAIAN)
+        =============================================
         
-        1. **cvScore** (0-100): Evaluate specific Hard Skills, Relevant Experience, and Education fit for the role.
-        2. **discScore** (0-100): Evaluate Personality Fit. Does their DISC profile match the behavioral demands of the job? (e.g. Sales needs high I/D, Admin needs high C/S).
-        3. **aptitudeScore** (0-100): Evaluate Cognitive Ability based on the Aptitude Score provided. (Reference: >135 is High, 90-135 is Average, <90 is Low).
-        4. **personalDataScore** (0-100): Evaluate Administrative Fit. Consider location (domicile vs office), age appropriateness, and completeness of data.
+        Berikut standar umum yang berlaku di perusahaan agribisnis/distribusi di Indonesia.
+        Cocokkan posisi yang dilamar kandidat dengan kategori terdekat:
 
-        Important: Be critical. Do not give high scores if experience is irrelevant or cognitive score is low.
+        [STAFF ADMIN / ADMINISTRASI]
+        - Pendidikan min: SMA/SMK, ideal D3/S1
+        - Skill: Ms. Office, ketelitian, filing, data entry
+        - DISC Ideal: C tinggi (teliti, akurat) dan S tinggi (konsisten, sabar)
+        - Aptitude: Minimal Average (≥90)
+
+        [SALES / MARKETING / ACCOUNT EXECUTIVE]
+        - Pendidikan min: SMA/SMK, ideal S1
+        - Skill: Komunikasi, negosiasi, target-oriented, pengalaman sales
+        - DISC Ideal: I tinggi (persuasif, komunikatif) dan D tinggi (agresif, goal-oriented)
+        - Aptitude: Minimal Average (≥90)
+
+        [DRIVER / SUPIR]
+        - Pendidikan min: SMA/SMK
+        - Skill: SIM A/B aktif, pengalaman mengemudi, kenal rute
+        - DISC Ideal: S tinggi (sabar, stabil) dan C tinggi (patuh aturan)
+        - Aptitude: Low-Average acceptable (≥75)
+
+        [WAREHOUSE / GUDANG / HELPER]
+        - Pendidikan min: SMP/SMA
+        - Skill: Fisik kuat, teliti, jujur, bisa kerja shift
+        - DISC Ideal: S tinggi (stabil, kooperatif) dan C tinggi (patuh prosedur)
+        - Aptitude: Low-Average acceptable (≥75)
+
+        [ACCOUNTING / FINANCE / KEUANGAN]
+        - Pendidikan min: D3/S1 Akuntansi/Keuangan
+        - Skill: Akuntansi, pajak, laporan keuangan, software accounting
+        - DISC Ideal: C tinggi (akurat, analitis) dan S tinggi (konsisten)
+        - Aptitude: Minimal High-Average (≥105)
+
+        [SUPERVISOR / KEPALA BAGIAN]
+        - Pendidikan min: S1
+        - Skill: Leadership, problem solving, pengalaman min 3 tahun di bidang
+        - DISC Ideal: D tinggi (tegas, decisive) dan I tinggi (memotivasi tim)
+        - Aptitude: Minimal High-Average (≥105)
+
+        [MANAGER / HEAD]
+        - Pendidikan min: S1, ideal S2
+        - Skill: Strategic thinking, leadership, pengalaman min 5 tahun
+        - DISC Ideal: D tinggi (decisif, target-driven) dan I tinggi (inspiring)
+        - Aptitude: Minimal Superior (≥120)
+
+        [IT / TEKNISI / ENGINEER]
+        - Pendidikan min: SMK/D3/S1 terkait
+        - Skill: Technical skills relevan, problem solving, sertifikasi
+        - DISC Ideal: C tinggi (analitis, detail) dan D tinggi (problem solver)
+        - Aptitude: Minimal High-Average (≥105)
+
+        [HRD / PERSONALIA]
+        - Pendidikan min: S1 Psikologi/Hukum/Manajemen
+        - Skill: Rekrutmen, UU Ketenagakerjaan, komunikasi interpersonal
+        - DISC Ideal: I tinggi (komunikatif) dan S tinggi (empati, sabar)
+        - Aptitude: Minimal Average (≥90)
+
+        [CUSTOMER SERVICE / RECEPTIONIST]
+        - Pendidikan min: SMA/D3
+        - Skill: Komunikasi, penampilan, kesabaran, service-oriented
+        - DISC Ideal: I tinggi (ramah, persuasif) dan S tinggi (sabar, tenang)
+        - Aptitude: Minimal Average (≥90)
+
+        Jika posisi tidak cocok persis dengan daftar di atas, gunakan kategori terdekat.
+        
+        =============================================
+        INSTRUKSI PENILAIAN (WAJIB DIPATUHI)
+        =============================================
+
+        Berikan skor pada 4 dimensi (skala 0-100):
+
+        1. **cvScore** (0-100): Evaluasi Hard Skills, Pengalaman Kerja RELEVAN, dan Pendidikan.
+           - Pengalaman TIDAK RELEVAN dengan posisi = skor RENDAH (≤40)
+           - Fresh graduate tanpa pengalaman untuk posisi yang butuh pengalaman = skor RENDAH (≤35)
+           - Pendidikan tidak sesuai minimum = penalti -20 dari skor dasar
+           - Pengalaman relevan + pendidikan sesuai = skor TINGGI (≥70)
+
+        2. **discScore** (0-100): Evaluasi Kecocokan Kepribadian DISC dengan posisi.
+           - Bandingkan profil DISC kandidat dengan DISC Ideal di referensi standar posisi
+           - Profil cocok = skor ≥70
+           - Profil TIDAK cocok (misal: kandidat S/C tinggi melamar Sales yang butuh I/D) = skor RENDAH (≤40)
+           - Konsistensi rendah = penalti -10
+           ${!hasDisc ? '- DATA TIDAK TERSEDIA: Berikan discScore = 0' : ''}
+
+        3. **aptitudeScore** (0-100): Evaluasi Kemampuan Kognitif.
+           - Konversikan skor aptitude ke skala 0-100 berdasarkan: skor aptitude / 180 * 100
+           - Jika skor aptitude di bawah minimum standar posisi = penalti -15
+           ${!hasAptitude ? '- DATA TIDAK TERSEDIA: Berikan aptitudeScore = 0' : ''}
+
+        4. **personalDataScore** (0-100): Evaluasi kelengkapan data, lokasi domisili, usia, dan kesesuaian administratif.
+           - Data lengkap dan sesuai = ≥70
+           - Domisili sangat jauh dari kantor tanpa kesediaan relokasi = penalti -15
+           - Data tidak lengkap = skor ≤50
+
+        ATURAN STRICT:
+        - Jadilah KRITIS dan OBJEKTIF. Ini digunakan untuk keputusan hire NYATA.
+        - JANGAN memberikan skor tinggi hanya karena "bisa dipelajari" atau "berpotensi".
+        - Evaluasi berdasarkan DATA YANG ADA, bukan asumsi.
+        - ${!hasDisc ? 'discScore HARUS = 0 karena data DISC tidak tersedia.' : ''}
+        - ${!hasAptitude ? 'aptitudeScore HARUS = 0 karena data Aptitude tidak tersedia.' : ''}
+        - JANGAN menghitung total score sendiri. JANGAN menyebutkan verdict akhir.
+        - Fokus pada ANALISA DESKRIPTIF yang detail dan spesifik.
 
         OUTPUT FORMAT:
-        Return a strictly valid JSON object strictly adhering to this structure:
+        Return STRICTLY VALID JSON:
         { 
             "cvScore": number,
             "discScore": number,
             "aptitudeScore": number,
             "personalDataScore": number,
-            "content": "Detailed markdown analysis in Indonesian language. Structure it with H3 headings (###) like '### Analisis Profil', '### Analisis Data Pribadi', '### Kecocokan DISC', '### Kemampuan Kognitif', '### Kesimpulan Komprehensif'. \n\nIMPORTANT: Your text conclusion MUST match the scores you give based on this weighted formula:\nFinal Score = (cvScore * 40%) + (discScore * 25%) + (aptitudeScore * 20%) + (personalDataScore * 15%)\n\nVerdict Thresholds:\n> 85 : Sangat Direkomendasikan\n75 - 84 : Direkomendasikan\n50 - 74 : Bisa Dipertimbangkan\n< 50 : Tidak Direkomendasikan\n\nEnsure your 'Kesimpulan Komprehensif' explicitly states one of these verdicts based on your scores.", 
-            "ocrText": "" 
+            "content": "Detailed markdown analysis dalam Bahasa Indonesia. Gunakan heading (###) berikut secara BERURUTAN:\\n### Analisis CV & Pengalaman Kerja\\n(evaluasi relevansi pengalaman, pendidikan, skill terhadap posisi)\\n### Analisis Kepribadian (DISC)\\n(evaluasi kecocokan profil DISC dengan tuntutan posisi)\\n### Analisis Kemampuan Kognitif\\n(evaluasi skor aptitude dibanding standar posisi)\\n### Analisis Data Pribadi\\n(evaluasi kelengkapan, domisili, usia)\\n### Kesimpulan\\n(ringkasan kelebihan dan kekurangan utama kandidat untuk posisi ini. JANGAN tulis verdict atau total score, cukup analisa objektif)"
         }
         `;
 
@@ -91,7 +191,7 @@ async function analyzeCandidate(candidate, cvText, discResult, aptitudeResult) {
 
   let aiResponseData = null;
 
-  // Helper to calculate result from raw scores
+  // Helper to calculate result from raw scores (DETERMINISTIC - SERVER-SIDE)
   const calculateFinalResult = (scores, textAnalysis) => {
     // Weights
     const W_CV = 0.40;
@@ -114,12 +214,38 @@ async function analyzeCandidate(candidate, cvText, discResult, aptitudeResult) {
     else if (finalScore >= 75) verdict = "Direkomendasikan";
     else if (finalScore >= 50) verdict = "Bisa Dipertimbangkan";
 
+    // Append server-calculated verdict to AI content for display consistency
+    const verdictSection = `\n\n### Verdict Akhir\n**${verdict}** — Match Score: **${finalScore}/100**\n\nRincian Perhitungan:\n- CV & Pengalaman (40%): ${scores.cvScore} × 0.40 = ${(scores.cvScore * W_CV).toFixed(1)}\n- DISC/Kepribadian (25%): ${scores.discScore} × 0.25 = ${(scores.discScore * W_DISC).toFixed(1)}\n- Aptitude/Kognitif (20%): ${scores.aptitudeScore} × 0.20 = ${(scores.aptitudeScore * W_APT).toFixed(1)}\n- Data Pribadi (15%): ${scores.personalDataScore} × 0.15 = ${(scores.personalDataScore * W_PERS).toFixed(1)}\n- **Total: ${finalScore}/100**`;
+
     return {
       matchScore: finalScore,
-      content: textAnalysis,
+      content: textAnalysis + verdictSection,
       verdict: verdict,
-      details: scores // Store component scores if needed later
+      details: scores
     };
+  };
+
+  // Post-process AI scores: enforce server-side overrides
+  const enforceScoreOverrides = (rawScores) => {
+    const scores = { ...rawScores };
+
+    // OVERRIDE 1: Force aptitudeScore = 0 if no aptitude data
+    if (!hasAptitude) {
+      scores.aptitudeScore = 0;
+    }
+
+    // OVERRIDE 2: Force discScore = 0 if no DISC data
+    if (!hasDisc) {
+      scores.discScore = 0;
+    }
+
+    // OVERRIDE 3: Clamp all scores to 0-100 range
+    scores.cvScore = Math.max(0, Math.min(100, Math.round(scores.cvScore || 0)));
+    scores.discScore = Math.max(0, Math.min(100, Math.round(scores.discScore || 0)));
+    scores.aptitudeScore = Math.max(0, Math.min(100, Math.round(scores.aptitudeScore || 0)));
+    scores.personalDataScore = Math.max(0, Math.min(100, Math.round(scores.personalDataScore || 0)));
+
+    return scores;
   };
 
 
@@ -145,16 +271,15 @@ async function analyzeCandidate(candidate, cvText, discResult, aptitudeResult) {
       const content = completion.choices[0].message.content;
       aiResponseData = JSON.parse(content);
 
-      const result = calculateFinalResult(
-        {
-          cvScore: aiResponseData.cvScore || 0,
-          discScore: aiResponseData.discScore || 0,
-          aptitudeScore: aiResponseData.aptitudeScore || 0,
-          personalDataScore: aiResponseData.personalDataScore || 0
-        },
-        aiResponseData.content
-      );
+      // Apply server-side overrides
+      const finalScores = enforceScoreOverrides({
+        cvScore: aiResponseData.cvScore,
+        discScore: aiResponseData.discScore,
+        aptitudeScore: aiResponseData.aptitudeScore,
+        personalDataScore: aiResponseData.personalDataScore
+      });
 
+      const result = calculateFinalResult(finalScores, aiResponseData.content);
       return { ...result, ocrText: cvText };
 
     } catch (error) {
@@ -177,16 +302,15 @@ async function analyzeCandidate(candidate, cvText, discResult, aptitudeResult) {
     const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
     aiResponseData = JSON.parse(jsonStr);
 
-    const calcResult = calculateFinalResult(
-      {
-        cvScore: aiResponseData.cvScore || 0,
-        discScore: aiResponseData.discScore || 0,
-        aptitudeScore: aiResponseData.aptitudeScore || 0,
-        personalDataScore: aiResponseData.personalDataScore || 0
-      },
-      aiResponseData.content
-    );
+    // Apply server-side overrides
+    const finalScores = enforceScoreOverrides({
+      cvScore: aiResponseData.cvScore,
+      discScore: aiResponseData.discScore,
+      aptitudeScore: aiResponseData.aptitudeScore,
+      personalDataScore: aiResponseData.personalDataScore
+    });
 
+    const calcResult = calculateFinalResult(finalScores, aiResponseData.content);
     return { ...calcResult, ocrText: cvText };
 
   } catch (error) {
