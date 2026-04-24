@@ -1,0 +1,4 @@
+# Railway Nixpacks config
+# Install system libraries needed for canvas (OCR feature)
+[phases.setup]
+nixPkgs = ["pkg-config", "cairo", "pango", "libjpeg", "giflib", "librsvg", "pixman"]

@@ -27,7 +27,12 @@
     "pdf-parse": "^1.1.1",
     "pdfkit": "^0.17.2",
     "serverless-http": "^4.0.0",
-    "prisma": "^7.2.0"
+    "prisma": "^7.2.0",
+    "tesseract.js": "^7.0.0"
+  },
+  "optionalDependencies": {
+    "canvas": "^3.2.3",
+    "pdfjs-dist": "^3.11.174"
   },
   "devDependencies": {}
 }
