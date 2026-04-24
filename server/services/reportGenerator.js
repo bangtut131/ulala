@@ -931,6 +931,154 @@ function generateAnalysisPage(doc, candidate, discResult, aptitudeResult, analys
 
         doc.fontSize(8).font('Helvetica-Oblique').fillColor(COLORS.slate500).text('*Interpretasi skor IQ bersifat estimasi berdasarkan jumlah jawaban benar.', { align: 'center' });
     }
+
+    // --- PAGE 4: DISC ANSWER SHEET ---
+    if (discResult && discResult.answers) {
+        let discAnswers = {};
+        try {
+            discAnswers = typeof discResult.answers === 'string' ? JSON.parse(discResult.answers) : discResult.answers;
+        } catch (e) { /* skip if parse fails */ }
+
+        if (discAnswers && Object.keys(discAnswers).length > 0) {
+            doc.addPage();
+
+            // Embedded DISC Questions data (server-side copy - matches client/src/data/discQuestions.js)
+            const discQuestionsData = [
+                { id: 1, options: [{ word: "Lembut, ramah", type: "S" }, { word: "Membujuk, meyakinkan", type: "I" }, { word: "Sederhana, mudah menerima", type: "C" }, { word: "Asli, berdaya cipta", type: "D" }] },
+                { id: 2, options: [{ word: "Menarik, mempesona", type: "I" }, { word: "Dapat bekerja sama", type: "S" }, { word: "Keras kepala", type: "D" }, { word: "Manis, menyenangkan", type: "C" }] },
+                { id: 3, options: [{ word: "Mau dipimpin, pengikut", type: "C" }, { word: "Tangguh, berani", type: "D" }, { word: "Loyal, setia", type: "S" }, { word: "Mempesona", type: "I" }] },
+                { id: 4, options: [{ word: "Bepandangan terbuka", type: "C" }, { word: "Berani, suka menolong", type: "S" }, { word: "Berkemauan keras", type: "D" }, { word: "Periang, bergembira", type: "I" }] },
+                { id: 5, options: [{ word: "Periang, suka bergurau", type: "I" }, { word: "Teliti, tepat", type: "C" }, { word: "Kasar, berani", type: "D" }, { word: "Tenang, terkendali", type: "S" }] },
+                { id: 6, options: [{ word: "Kompetitif", type: "D" }, { word: "Timbang rasa, bijaksana", type: "C" }, { word: "Terbuka, ramah", type: "I" }, { word: "Harmonis", type: "S" }] },
+                { id: 7, options: [{ word: "Rewel, cerewet", type: "C" }, { word: "Taat, patuh", type: "S" }, { word: "Tidak mudah mundur", type: "D" }, { word: "Suka melucu, lincah", type: "I" }] },
+                { id: 8, options: [{ word: "Berani, tangguh", type: "D" }, { word: "Membangkitkan semangat", type: "I" }, { word: "Patuh, menyerah", type: "S" }, { word: "Takut-takut, pendiam", type: "C" }] },
+                { id: 9, options: [{ word: "Suka bergaul", type: "I" }, { word: "Sabar, toleransi", type: "S" }, { word: "Percaya diri, mandiri", type: "D" }, { word: "Berwatak halus", type: "C" }] },
+                { id: 10, options: [{ word: "Menyukai tantangan", type: "D" }, { word: "Terbuka, menerima ide", type: "I" }, { word: "Ramah, bersahabat", type: "S" }, { word: "Moderat", type: "C" }] },
+                { id: 11, options: [{ word: "Banyak bicara", type: "I" }, { word: "Terkendali, mandiri", type: "C" }, { word: "Tidak berlebihan", type: "S" }, { word: "Tegas, cepat keputusan", type: "D" }] },
+                { id: 12, options: [{ word: "Berbudi bahasa halus", type: "S" }, { word: "Berani, ambil resiko", type: "D" }, { word: "Diplomatik", type: "C" }, { word: "Mudah puas", type: "I" }] },
+                { id: 13, options: [{ word: "Agresif, penuh inisiatif", type: "D" }, { word: "Menyukai hiburan", type: "I" }, { word: "Pengikut", type: "S" }, { word: "Gelisah, khawatir", type: "C" }] },
+                { id: 14, options: [{ word: "Berhati-hati", type: "C" }, { word: "Fokus, tidak goyah", type: "D" }, { word: "Meyakinkan", type: "I" }, { word: "Baik hati", type: "S" }] },
+                { id: 15, options: [{ word: "Rela berkorban", type: "S" }, { word: "Antusias, ingin tahu", type: "I" }, { word: "Mudah menyetujui", type: "C" }, { word: "Lincah, antusias", type: "D" }] },
+                { id: 16, options: [{ word: "Percaya diri", type: "I" }, { word: "Simpatik, pengertian", type: "S" }, { word: "Toleran", type: "C" }, { word: "Tegas, agresif", type: "D" }] },
+                { id: 17, options: [{ word: "Disiplin, terkendali", type: "C" }, { word: "Dermawan", type: "S" }, { word: "Suka berekspresi", type: "I" }, { word: "Gigih", type: "D" }] },
+                { id: 18, options: [{ word: "Terpuji, dikagumi", type: "I" }, { word: "Ramah, senang menolong", type: "S" }, { word: "Mudah menyerah", type: "C" }, { word: "Karakter kuat", type: "D" }] },
+                { id: 19, options: [{ word: "Menunjukkan hormat", type: "C" }, { word: "Pelopor, perintis", type: "D" }, { word: "Optimis, positif", type: "I" }, { word: "Selalu siap membantu", type: "S" }] },
+                { id: 20, options: [{ word: "Dapat berargumentasi", type: "D" }, { word: "Fleksibel, adaptasi", type: "S" }, { word: "Naif, acuh tak acuh", type: "C" }, { word: "Riang", type: "I" }] },
+                { id: 21, options: [{ word: "Dapat dipercaya", type: "I" }, { word: "Mudah puas", type: "S" }, { word: "Selalu positif", type: "D" }, { word: "Tenang, pendiam", type: "C" }] },
+                { id: 22, options: [{ word: "Mudah bergaul", type: "I" }, { word: "Berbudaya", type: "C" }, { word: "Bersemangat, giat", type: "D" }, { word: "Toleransi", type: "S" }] },
+                { id: 23, options: [{ word: "Menyenangkan, ramah", type: "I" }, { word: "Teliti, akurat", type: "C" }, { word: "Terus terang", type: "D" }, { word: "Terkendali", type: "S" }] },
+                { id: 24, options: [{ word: "Resah, tidak santai", type: "D" }, { word: "Baik hati, ramah", type: "S" }, { word: "Populer", type: "I" }, { word: "Rapi, teratur", type: "C" }] }
+            ];
+
+            // Header
+            const dateStr = candidate.createdAt ? new Date(candidate.createdAt).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '-';
+
+            doc.fontSize(14).font('Helvetica-Bold').fillColor(COLORS.slate800).text('LEMBAR JAWABAN DISC', PAGE_MARGIN, PAGE_MARGIN, { align: 'center' });
+            doc.fontSize(9).font('Helvetica').fillColor(COLORS.slate500).text('Detail pilihan Most (Paling) dan Least (Kurang) untuk setiap pertanyaan', { align: 'center' });
+            doc.moveDown(0.5);
+
+            doc.fontSize(9).font('Helvetica').fillColor(COLORS.slate600);
+            doc.text(`Nama: ${candidate.fullName || '-'}`, PAGE_MARGIN);
+            doc.text(`Posisi: ${candidate.position || '-'}   |   Tanggal: ${dateStr}`, PAGE_MARGIN);
+            doc.moveDown(1);
+
+            // Table Setup
+            const tblStartY = doc.y;
+            const colWidths = { no: 25, word: 250, type: 30, most: 40, least: 40 };
+            const rowH = 14;
+            const headerH = 22;
+            const totalW = colWidths.no + colWidths.word + colWidths.type + colWidths.most + colWidths.least;
+
+            // Draw Header Row
+            let tblY = tblStartY;
+            doc.save().fillColor(COLORS.slate100).rect(PAGE_MARGIN, tblY, totalW, headerH).fill().restore();
+            doc.save().strokeColor(COLORS.slate300).lineWidth(1).rect(PAGE_MARGIN, tblY, totalW, headerH).stroke().restore();
+
+            doc.fontSize(7).font('Helvetica-Bold').fillColor(COLORS.slate600);
+            let hx = PAGE_MARGIN;
+            doc.text('NO.', hx + 3, tblY + 7, { width: colWidths.no, align: 'center' }); hx += colWidths.no;
+            doc.text('OPSI JAWABAN', hx + 5, tblY + 7, { width: colWidths.word - 10 }); hx += colWidths.word;
+            doc.text('TIPE', hx + 2, tblY + 7, { width: colWidths.type, align: 'center' }); hx += colWidths.type;
+            doc.fillColor(COLORS.green800).text('MOST', hx + 2, tblY + 7, { width: colWidths.most, align: 'center' }); hx += colWidths.most;
+            doc.fillColor(COLORS.red500).text('LEAST', hx + 2, tblY + 7, { width: colWidths.least, align: 'center' });
+
+            tblY += headerH;
+
+            // Draw Rows
+            discQuestionsData.forEach((q) => {
+                const answer = discAnswers[q.id] || {};
+
+                // Check page break before drawing question group (4 rows)
+                if (tblY + (rowH * 4) + 5 > doc.page.height - PAGE_MARGIN) {
+                    doc.addPage();
+                    tblY = PAGE_MARGIN;
+                }
+
+                q.options.forEach((opt, optIdx) => {
+                    let cx = PAGE_MARGIN;
+
+                    // Question group separator
+                    if (optIdx === 0) {
+                        doc.save().strokeColor(COLORS.slate400).lineWidth(0.5).moveTo(PAGE_MARGIN, tblY).lineTo(PAGE_MARGIN + totalW, tblY).stroke().restore();
+                    }
+
+                    // No column (only first row of group)
+                    if (optIdx === 0) {
+                        const groupH = rowH * q.options.length;
+                        doc.save().fillColor(COLORS.slate50).rect(cx, tblY, colWidths.no, groupH).fill().restore();
+                        doc.save().strokeColor(COLORS.slate200).rect(cx, tblY, colWidths.no, groupH).stroke().restore();
+                        doc.fontSize(8).font('Helvetica-Bold').fillColor(COLORS.slate500)
+                            .text(String(q.id), cx, tblY + (groupH / 2) - 4, { width: colWidths.no, align: 'center' });
+                    }
+                    cx += colWidths.no;
+
+                    // Word column
+                    doc.fontSize(8).font('Helvetica').fillColor(COLORS.slate800)
+                        .text(opt.word, cx + 5, tblY + 3, { width: colWidths.word - 10 });
+                    cx += colWidths.word;
+
+                    // Type column
+                    doc.fontSize(8).font('Helvetica-Bold').fillColor(COLORS.slate400)
+                        .text(opt.type, cx, tblY + 3, { width: colWidths.type, align: 'center' });
+                    cx += colWidths.type;
+
+                    // Most column
+                    const isMost = answer.most === opt.type;
+                    if (isMost) {
+                        doc.save().fillColor(COLORS.green50).rect(cx, tblY, colWidths.most, rowH).fill().restore();
+                    }
+                    doc.fontSize(8).font('Helvetica-Bold').fillColor(isMost ? COLORS.green600 : COLORS.slate200)
+                        .text(isMost ? 'V' : '-', cx, tblY + 3, { width: colWidths.most, align: 'center' });
+                    cx += colWidths.most;
+
+                    // Least column
+                    const isLeast = answer.least === opt.type;
+                    if (isLeast) {
+                        doc.save().fillColor('#fef2f2').rect(cx, tblY, colWidths.least, rowH).fill().restore();
+                    }
+                    doc.fontSize(8).font('Helvetica-Bold').fillColor(isLeast ? COLORS.red500 : COLORS.slate200)
+                        .text(isLeast ? 'V' : '-', cx, tblY + 3, { width: colWidths.least, align: 'center' });
+
+                    // Row bottom line
+                    doc.save().strokeColor(COLORS.slate200).lineWidth(0.3)
+                        .moveTo(PAGE_MARGIN + colWidths.no, tblY + rowH)
+                        .lineTo(PAGE_MARGIN + totalW, tblY + rowH)
+                        .stroke().restore();
+
+                    tblY += rowH;
+                });
+            });
+
+            // Outside border
+            doc.save().strokeColor(COLORS.slate300).lineWidth(1)
+                .rect(PAGE_MARGIN, tblStartY, totalW, tblY - tblStartY + headerH)
+                .stroke().restore();
+
+            doc.y = tblY + 15;
+            doc.fontSize(7).font('Helvetica-Oblique').fillColor(COLORS.slate500)
+                .text('*Most = sifat yang paling menggambarkan diri kandidat. Least = sifat yang paling tidak menggambarkan diri kandidat.', { align: 'center' });
+        }
+    }
 }
 
 function generateBiodataPDF(candidate) {

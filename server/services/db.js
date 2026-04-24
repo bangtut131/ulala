@@ -357,7 +357,8 @@ const db = {
                     iScore: disc.i_score,
                     sScore: disc.s_score,
                     cScore: disc.c_score,
-                    fullResult: disc.full_result
+                    fullResult: disc.full_result,
+                    answers: disc.answers
                 } : null,
                 analysis: analysis ? {
                     matchScore: analysis.match_score,
@@ -434,7 +435,8 @@ const db = {
                         iScore: disc.i_score,
                         sScore: disc.s_score,
                         cScore: disc.c_score,
-                        fullResult: disc.full_result
+                        fullResult: disc.full_result,
+                        answers: disc.answers
                     } : null,
                     analysis: analysis ? {
                         matchScore: analysis.match_score,

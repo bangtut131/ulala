@@ -1,6 +1,7 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { evaluateJobFit } from '../utils/discLogic';
+import { discQuestions } from '../data/discQuestions';
 
 export default function DiscResultReport({ result, candidate }) {
     // Graceful fallback if fullResult is missing (legacy data)
@@ -253,6 +254,73 @@ export default function DiscResultReport({ result, candidate }) {
                     </div>
                 </div>
             )}
+
+            {/* DISC Answer Sheet Section */}
+            {result.answers && (() => {
+                // Parse answers safely
+                let parsedAnswers = {};
+                try {
+                    parsedAnswers = typeof result.answers === 'string' ? JSON.parse(result.answers) : result.answers;
+                } catch (e) {
+                    return null;
+                }
+
+                if (!parsedAnswers || Object.keys(parsedAnswers).length === 0) return null;
+
+                return (
+                    <div className="mt-12 border-t-4 border-slate-700 pt-8">
+                        <h2 className="text-2xl font-bold mb-2 text-slate-800">LEMBAR JAWABAN DISC</h2>
+                        <p className="text-sm text-slate-500 mb-6">Detail pilihan Most (Paling) dan Least (Kurang) untuk setiap pertanyaan.</p>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse border border-gray-300 text-sm">
+                                <thead>
+                                    <tr className="bg-slate-100 border-b-2 border-gray-300">
+                                        <th className="py-3 px-2 border-r border-gray-300 w-12 text-center font-bold text-slate-600 text-xs uppercase tracking-wider">No.</th>
+                                        <th className="py-3 px-3 border-r border-gray-300 font-bold text-slate-600 text-xs uppercase tracking-wider text-left">Opsi Jawaban</th>
+                                        <th className="py-3 px-2 border-r border-gray-300 w-14 text-center font-bold text-slate-600 text-xs uppercase tracking-wider">Tipe</th>
+                                        <th className="py-3 px-2 border-r border-gray-300 w-16 text-center font-bold text-green-700 text-xs uppercase tracking-wider">Most</th>
+                                        <th className="py-3 px-2 w-16 text-center font-bold text-red-700 text-xs uppercase tracking-wider">Least</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {discQuestions.map((question) => {
+                                        const answer = parsedAnswers[question.id] || {};
+                                        return question.options.map((opt, optIdx) => (
+                                            <tr
+                                                key={`${question.id}-${optIdx}`}
+                                                className={`border-b border-gray-200 hover:bg-slate-50 ${optIdx === 0 ? 'border-t-2 border-t-gray-300' : ''}`}
+                                            >
+                                                {optIdx === 0 && (
+                                                    <td rowSpan={question.options.length} className="py-2 px-2 text-center border-r border-gray-300 font-mono text-slate-500 font-bold align-middle bg-slate-50">
+                                                        {question.id}
+                                                    </td>
+                                                )}
+                                                <td className="py-2 px-3 border-r border-gray-300 text-slate-800">
+                                                    {opt.word}
+                                                </td>
+                                                <td className="py-2 px-2 text-center border-r border-gray-300 font-bold text-slate-400">
+                                                    {opt.type}
+                                                </td>
+                                                <td className={`py-2 px-2 text-center border-r border-gray-300 font-bold ${answer.most === opt.type ? 'text-green-600 bg-green-50' : 'text-slate-200'}`}>
+                                                    {answer.most === opt.type ? '✔' : '-'}
+                                                </td>
+                                                <td className={`py-2 px-2 text-center font-bold ${answer.least === opt.type ? 'text-red-600 bg-red-50' : 'text-slate-200'}`}>
+                                                    {answer.least === opt.type ? '✔' : '-'}
+                                                </td>
+                                            </tr>
+                                        ));
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="mt-4 text-xs text-slate-500 italic text-center">
+                            *Most = sifat yang paling menggambarkan diri kandidat. Least = sifat yang paling tidak menggambarkan diri kandidat.
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }
