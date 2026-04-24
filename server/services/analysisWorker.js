@@ -108,9 +108,29 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
                         cvText = "";
                     }
 
-                    // Step 2: If pdf-parse returned empty/short text, use AI Vision OCR
+                    // Step 2: If pdf-parse failed, try Tesseract.js OCR (no AI needed)
                     if (!cvText || cvText.trim().length < 50) {
-                        await logProgress(candidateId, "PDF text-based extraction failed. Using AI Vision OCR...");
+                        await logProgress(candidateId, "Text extraction empty. Trying Tesseract OCR (non-AI)...");
+                        try {
+                            const { ocrPdfBuffer } = require('./ocrService');
+                            const tesseractText = await ocrPdfBuffer(pdfBuffer, 5);
+                            if (tesseractText && tesseractText.trim().length > 30) {
+                                cvText = tesseractText;
+                                console.log(`[Worker] Tesseract OCR extracted ${cvText.length} characters.`);
+                                await logProgress(candidateId, `Tesseract OCR success (${cvText.length} chars).`);
+                            } else {
+                                console.warn("[Worker] Tesseract OCR returned insufficient text.");
+                                await logProgress(candidateId, "Tesseract OCR insufficient. Trying AI Vision...");
+                            }
+                        } catch (tesseractErr) {
+                            console.warn("[Worker] Tesseract OCR failed:", tesseractErr.message);
+                            await logProgress(candidateId, "Tesseract OCR unavailable. Trying AI Vision...");
+                        }
+                    }
+
+                    // Step 3: Last resort — AI Vision OCR (requires API key)
+                    if (!cvText || cvText.trim().length < 50) {
+                        await logProgress(candidateId, "Using AI Vision OCR as last resort...");
                         try {
                             const settings = await getSettings();
                             const apiKey = settings.geminiApiKey;
@@ -143,7 +163,6 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
                                     baseURL: settings.aiBaseUrl || "https://api.openai.com/v1",
                                 });
 
-                                // Convert PDF buffer to base64 image-like data URL
                                 const completion = await openai.chat.completions.create({
                                     messages: [{
                                         role: "user",
@@ -163,7 +182,7 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
                                 await logProgress(candidateId, `AI Vision OCR success (${cvText.length} chars).`);
                             } else {
                                 console.warn("[Worker] AI Vision returned insufficient text.");
-                                await logProgress(candidateId, "AI Vision OCR returned insufficient text.");
+                                await logProgress(candidateId, "All OCR methods failed. CV text unavailable.");
                             }
                         } catch (visionErr) {
                             console.error("[Worker] AI Vision OCR failed:", visionErr.message);
