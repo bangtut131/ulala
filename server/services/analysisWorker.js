@@ -81,30 +81,103 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
 
         // A. Get OCR Text
         let cvText = candidate.cvText;
+        let pdfBuffer = null; // Keep buffer for Gemini Vision fallback
+
         if (!cvText || cvText.length < 50) {
             try {
                 console.log("[Worker] CV Text missing, trying to fetch...");
-                let buffer = null;
                 if (candidate.cvDriveId) {
-                    buffer = await downloadFromDrive(candidate.cvDriveId);
+                    pdfBuffer = await downloadFromDrive(candidate.cvDriveId);
                 } else if (candidate.cvUrl) {
                     await logProgress(candidateId, "Downloading CV from Storage...");
                     const urlParts = candidate.cvUrl.split('/resumes/');
                     if (urlParts.length > 1) {
                         const { data: blob } = await supabase.storage.from('resumes').download(urlParts[1]);
-                        if (blob) buffer = Buffer.from(await blob.arrayBuffer());
+                        if (blob) pdfBuffer = Buffer.from(await blob.arrayBuffer());
                     }
                 }
 
-                if (buffer) {
-                    await logProgress(candidateId, "Starting PDF Parse (OCR)...");
-                    const data = await pdfParse(buffer);
-                    cvText = data.text;
-                    // Update Candidate
-                    await prisma.candidate.update({
-                        where: { id: candidate.id },
-                        data: { cvText: cvText }
-                    });
+                if (pdfBuffer) {
+                    // Step 1: Try pdf-parse first (fast, free — works for text-based PDFs)
+                    await logProgress(candidateId, "Starting PDF Parse (Text Extraction)...");
+                    try {
+                        const data = await pdfParse(pdfBuffer);
+                        cvText = data.text;
+                    } catch (parseErr) {
+                        console.warn("[Worker] pdf-parse failed:", parseErr.message);
+                        cvText = "";
+                    }
+
+                    // Step 2: If pdf-parse returned empty/short text, use AI Vision OCR
+                    if (!cvText || cvText.trim().length < 50) {
+                        await logProgress(candidateId, "PDF text-based extraction failed. Using AI Vision OCR...");
+                        try {
+                            const settings = await getSettings();
+                            const apiKey = settings.geminiApiKey;
+                            const ocrPrompt = "Extract ALL text content from this PDF/CV document. Return the raw text only, no formatting or commentary. Include all personal info, education, work experience, skills, and any other content visible in the document. If the document is in Indonesian, keep it in Indonesian.";
+                            const base64Pdf = pdfBuffer.toString('base64');
+                            let visionText = '';
+
+                            // Try Gemini first (best for Vision OCR)
+                            const geminiKey = process.env.GEMINI_API_KEY || (settings.aiProvider !== 'custom' ? apiKey : null);
+
+                            if (geminiKey && geminiKey !== '') {
+                                console.log("[Worker] Attempting Gemini Vision OCR...");
+                                const { GoogleGenerativeAI } = require("@google/generative-ai");
+                                const genAI = new GoogleGenerativeAI(geminiKey);
+                                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+                                const result = await model.generateContent([
+                                    { inlineData: { mimeType: "application/pdf", data: base64Pdf } },
+                                    ocrPrompt
+                                ]);
+                                const response = await result.response;
+                                visionText = response.text();
+
+                            } else if (apiKey && settings.aiProvider === 'custom') {
+                                // Fallback: OpenAI-compatible provider with vision
+                                console.log("[Worker] Attempting OpenAI-compatible Vision OCR...");
+                                const OpenAI = require("openai");
+                                const openai = new OpenAI({
+                                    apiKey: apiKey,
+                                    baseURL: settings.aiBaseUrl || "https://api.openai.com/v1",
+                                });
+
+                                // Convert PDF buffer to base64 image-like data URL
+                                const completion = await openai.chat.completions.create({
+                                    messages: [{
+                                        role: "user",
+                                        content: [
+                                            { type: "text", text: ocrPrompt },
+                                            { type: "image_url", image_url: { url: `data:application/pdf;base64,${base64Pdf}` } }
+                                        ]
+                                    }],
+                                    model: settings.aiModel || "gpt-4o-mini",
+                                });
+                                visionText = completion.choices[0].message.content;
+                            }
+
+                            if (visionText && visionText.trim().length > 30) {
+                                cvText = visionText;
+                                console.log(`[Worker] AI Vision OCR extracted ${cvText.length} characters.`);
+                                await logProgress(candidateId, `AI Vision OCR success (${cvText.length} chars).`);
+                            } else {
+                                console.warn("[Worker] AI Vision returned insufficient text.");
+                                await logProgress(candidateId, "AI Vision OCR returned insufficient text.");
+                            }
+                        } catch (visionErr) {
+                            console.error("[Worker] AI Vision OCR failed:", visionErr.message);
+                            await logProgress(candidateId, "AI Vision OCR failed: " + visionErr.message);
+                        }
+                    }
+
+                    // Save extracted text to DB
+                    if (cvText && cvText.trim().length > 10) {
+                        await prisma.candidate.update({
+                            where: { id: candidate.id },
+                            data: { cvText: cvText }
+                        });
+                    }
                 }
             } catch (e) {
                 console.error("[Worker] OCR Retry Failed:", e);
