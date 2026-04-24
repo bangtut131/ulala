@@ -1,5 +1,5 @@
 const { db } = require('./db');
-const { supabase } = require('./supabaseClient');
+const { supabase, supabaseAdmin } = require('./supabaseClient');
 const prisma = db;
 
 // Helper to log progress to DB for Admin visibility
@@ -127,8 +127,18 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
             };
         }
 
-        // C. Save Analysis
+        // C. Save Analysis (Delete old one first to prevent duplicates on regenerate)
         console.log("[Worker] Saving Analysis to DB...");
+        try {
+            await supabaseAdmin
+                .from('analyses')
+                .delete()
+                .eq('candidate_id', parseInt(candidateId));
+            console.log("[Worker] Old analysis deleted.");
+        } catch (delErr) {
+            console.warn("[Worker] Could not delete old analysis (may not exist):", delErr.message);
+        }
+
         await prisma.analysis.create({
             data: {
                 candidateId: parseInt(candidateId),

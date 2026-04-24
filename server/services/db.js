@@ -321,10 +321,14 @@ const db = {
 
             if (!data) return null;
 
-            // Helper to get first item or object
+            // Helper to get first item or object (sort by created_at desc for latest)
             const getRelation = (rel) => Array.isArray(rel) ? rel[0] : rel;
+            const getLatestRelation = (rel) => {
+                if (!Array.isArray(rel) || rel.length === 0) return rel;
+                return [...rel].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+            };
             const disc = getRelation(data.disc_results);
-            const analysis = getRelation(data.analyses);
+            const analysis = getLatestRelation(data.analyses);
 
             return {
                 ...data,
@@ -399,11 +403,15 @@ const db = {
 
             // Map results to match expected app structure
             return data.map(c => {
-                // Helper to get first item or object
+                // Helper to get first item or object (sort by created_at desc for latest)
                 const getRelation = (rel) => Array.isArray(rel) ? rel[0] : rel;
+                const getLatestRelation = (rel) => {
+                    if (!Array.isArray(rel) || rel.length === 0) return rel;
+                    return [...rel].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+                };
 
                 const disc = getRelation(c.disc_results); // Mapped via alias
-                const analysis = getRelation(c.analyses);
+                const analysis = getLatestRelation(c.analyses);
 
                 return {
                     id: c.id,

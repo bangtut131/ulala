@@ -229,9 +229,14 @@ async function analyzeCandidate(candidate, cvText, discResult, aptitudeResult) {
   const enforceScoreOverrides = (rawScores) => {
     const scores = { ...rawScores };
 
-    // OVERRIDE 1: Force aptitudeScore = 0 if no aptitude data
+    // OVERRIDE 1: aptitudeScore calculated DETERMINISTICALLY by server
+    // AI cannot be trusted to calculate this correctly
     if (!hasAptitude) {
       scores.aptitudeScore = 0;
+    } else {
+      // Server calculates: aptitude score (0-180) → normalized to 0-100 scale
+      const rawAptScore = aptitudeResult.score || 0;
+      scores.aptitudeScore = Math.round((rawAptScore / 180) * 100);
     }
 
     // OVERRIDE 2: Force discScore = 0 if no DISC data
