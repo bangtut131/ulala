@@ -38,6 +38,7 @@ const portalAuthRoutes = require('./routes/portalAuth');
 const vacancyRoutes = require('./routes/vacancies');
 const employeeRoutes = require('./routes/employees');
 const onboardingRoutes = require('./routes/onboarding');
+const learningRoutes = require('./routes/learning');
 
 // Debug Logging Middleware
 app.use((req, res, next) => {
@@ -82,6 +83,7 @@ apiRouter.use('/portal/auth', portalAuthRoutes); // Portal Auth
 apiRouter.use('/vacancies', vacancyRoutes); // Public & Admin Vacancies
 apiRouter.use('/employees', employeeRoutes); // Employee Database
 apiRouter.use('/onboarding', onboardingRoutes); // Onboarding Portal
+apiRouter.use('/learning', learningRoutes); // E-Learning Admin
 
 app.use('/api', apiRouter);
 // Netlify Functions Path - Handle both with and without trailing slash

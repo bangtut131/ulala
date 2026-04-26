@@ -27,6 +27,9 @@ import EmployeeDetail from './pages/EmployeeDetail';
 import OnboardingLogin from './pages/OnboardingLogin';
 import OnboardingPortal from './pages/OnboardingPortal';
 import ExitForm from './pages/ExitForm';
+import AdminLearning from './pages/AdminLearning';
+import OnboardingModule from './pages/OnboardingModule';
+import OnboardingTest from './pages/OnboardingTest';
 import useAutoLogout from './hooks/useAutoLogout';
 import InactivityWarning from './components/InactivityWarning';
 
@@ -172,6 +175,15 @@ function App() {
         <Route path="/onboarding/login" element={<OnboardingLogin />} />
         <Route path="/onboarding" element={<OnboardingPortal />} />
         <Route path="/onboarding/exit" element={<ExitForm />} />
+        <Route path="/onboarding/module/:id" element={<OnboardingModule />} />
+        <Route path="/onboarding/test/:id" element={<OnboardingTest />} />
+
+        {/* Admin E-Learning */}
+        <Route path="/admin/learning" element={
+          <ProtectedRoute>
+            <AdminLearning />
+          </ProtectedRoute>
+        } />
       </Routes>
     </Router>
   );

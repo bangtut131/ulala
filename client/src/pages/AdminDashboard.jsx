@@ -192,6 +192,9 @@ export default function AdminDashboard() {
                         <a href="/admin/employees" target="_blank" className="btn-outline px-4 py-2 flex items-center gap-2 text-sm bg-cyan-500/10 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/20">
                             👥 Employees
                         </a>
+                        <a href="/admin/learning" target="_blank" className="btn-outline px-4 py-2 flex items-center gap-2 text-sm bg-violet-500/10 text-violet-400 border-violet-500/20 hover:bg-violet-500/20">
+                            📚 E-Learning
+                        </a>
                         <a href="/admin/settings" target="_blank" className="btn-outline px-4 py-2 flex items-center gap-2 text-sm bg-slate-800/50">
                             ⚙ Settings
                         </a>

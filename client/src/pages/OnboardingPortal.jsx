@@ -103,6 +103,9 @@ export default function OnboardingPortal() {
                     )}
                 </div>
 
+                {/* E-Learning Section */}
+                <LearningSection token={token} navigate={navigate} />
+
                 {/* Exit Form Link */}
                 <div className="bg-slate-800/50 rounded-2xl p-6 border border-white/5">
                     <h2 className="text-lg font-bold text-white mb-2">Lainnya</h2>
@@ -112,6 +115,83 @@ export default function OnboardingPortal() {
                     </button>
                 </div>
             </div>
+        </div>
+    );
+}
+
+function LearningSection({ token, navigate }) {
+    const [courses, setCourses] = useState([]);
+    const [progress, setProgress] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const headers = { 'Authorization': `Bearer ${token}` };
+
+    useEffect(() => {
+        fetchLearning();
+    }, []);
+
+    const fetchLearning = async () => {
+        try {
+            const [cRes, pRes] = await Promise.all([
+                fetch('/api/onboarding/courses', { headers }),
+                fetch('/api/onboarding/progress', { headers })
+            ]);
+            if (cRes.ok) setCourses(await cRes.json());
+            if (pRes.ok) setProgress(await pRes.json());
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
+    };
+
+    if (loading) return null;
+    if (courses.length === 0) return null;
+
+    const getModuleStatus = (m) => {
+        if (m.result?.passed) return { label: '✅ Lulus', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' };
+        if (m.result && !m.result.passed) return { label: '❌ Gagal', color: 'bg-red-500/20 text-red-300 border-red-500/30' };
+        if (m.access && new Date(m.access.expires_at) < new Date()) return { label: '⏰ Expired', color: 'bg-slate-500/20 text-slate-400 border-slate-500/30' };
+        if (m.access) return { label: '📖 Sedang Belajar', color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' };
+        return { label: 'Belum Mulai', color: 'bg-slate-700/20 text-slate-500 border-slate-600/30' };
+    };
+
+    return (
+        <div className="bg-slate-800/80 backdrop-blur rounded-2xl p-6 border border-white/10 mb-8">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">📚 Materi Onboarding</h2>
+                {progress && (
+                    <span className="text-sm text-slate-400">{progress.passedModules}/{progress.totalModules} selesai</span>
+                )}
+            </div>
+
+            {progress && progress.totalModules > 0 && (
+                <div className="mb-6">
+                    <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full transition-all duration-500" style={{ width: `${progress.progressPercent}%` }}></div>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">Progress: {progress.progressPercent}%</p>
+                </div>
+            )}
+
+            {courses.map(course => (
+                <div key={course.id} className="mb-4">
+                    <h3 className="text-sm font-semibold text-violet-400 mb-3">{course.title}</h3>
+                    <div className="space-y-2">
+                        {(course.learning_modules || []).map(m => {
+                            const status = getModuleStatus(m);
+                            const canAccess = !m.access || new Date(m.access.expires_at) > new Date();
+                            return (
+                                <div key={m.id} onClick={() => canAccess && navigate(`/onboarding/module/${m.id}`)}
+                                    className={`flex items-center gap-3 bg-slate-900 rounded-xl p-3 border border-white/5 transition ${canAccess ? 'hover:border-violet-500/20 cursor-pointer' : 'opacity-60'}`}>
+                                    <div className="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center text-violet-400 font-bold text-xs">{m.sort_order + 1}</div>
+                                    <div className="flex-1">
+                                        <p className="text-white text-sm font-medium">{m.title}</p>
+                                        {m.access && <p className="text-xs text-slate-500">Akses s/d {new Date(m.access.expires_at).toLocaleDateString('id-ID')} • {m.access.access_count}x dibuka</p>}
+                                    </div>
+                                    <span className={`px-2 py-0.5 rounded text-xs font-medium border ${status.color}`}>{status.label}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            ))}
         </div>
     );
 }
