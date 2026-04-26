@@ -36,6 +36,8 @@ const manpowerRoutes = require('./routes/manpower');
 
 const portalAuthRoutes = require('./routes/portalAuth');
 const vacancyRoutes = require('./routes/vacancies');
+const employeeRoutes = require('./routes/employees');
+const onboardingRoutes = require('./routes/onboarding');
 
 // Debug Logging Middleware
 app.use((req, res, next) => {
@@ -78,6 +80,8 @@ apiRouter.use('/auth', authRoutes); // Admin Auth
 apiRouter.use('/manpower', manpowerRoutes);
 apiRouter.use('/portal/auth', portalAuthRoutes); // Portal Auth
 apiRouter.use('/vacancies', vacancyRoutes); // Public & Admin Vacancies
+apiRouter.use('/employees', employeeRoutes); // Employee Database
+apiRouter.use('/onboarding', onboardingRoutes); // Onboarding Portal
 
 app.use('/api', apiRouter);
 // Netlify Functions Path - Handle both with and without trailing slash
@@ -117,6 +121,23 @@ setInterval(async () => {
         console.error('[Keep-Alive] Ping failed:', e.message);
     }
 }, KEEPALIVE_INTERVAL_MS);
+
+// --- DAILY PROBATION STATUS CHECK ---
+const DAILY_CHECK_MS = 24 * 60 * 60 * 1000; // 24 hours
+setTimeout(async () => {
+    // Run once on startup (delayed 30s to let server settle)
+    try {
+        const { checkProbationStatus } = require('./services/employeeService');
+        await checkProbationStatus();
+    } catch (e) { console.error('[Probation Check] Startup check failed:', e.message); }
+}, 30000);
+setInterval(async () => {
+    try {
+        console.log('[Probation Check] Running daily probation status check...');
+        const { checkProbationStatus } = require('./services/employeeService');
+        await checkProbationStatus();
+    } catch (e) { console.error('[Probation Check] Failed:', e.message); }
+}, DAILY_CHECK_MS);
 
 // Only listen if run directly (not imported as a function)
 if (require.main === module) {

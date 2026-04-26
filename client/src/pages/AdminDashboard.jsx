@@ -189,6 +189,9 @@ export default function AdminDashboard() {
                         <a href="/admin/sla" target="_blank" className="btn-outline px-4 py-2 flex items-center gap-2 text-sm bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20">
                             📊 SLA Report
                         </a>
+                        <a href="/admin/employees" target="_blank" className="btn-outline px-4 py-2 flex items-center gap-2 text-sm bg-cyan-500/10 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/20">
+                            👥 Employees
+                        </a>
                         <a href="/admin/settings" target="_blank" className="btn-outline px-4 py-2 flex items-center gap-2 text-sm bg-slate-800/50">
                             ⚙ Settings
                         </a>

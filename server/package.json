@@ -30,7 +30,8 @@
     "pdfkit": "^0.17.2",
     "prisma": "^7.2.0",
     "serverless-http": "^4.0.0",
-    "tesseract.js": "^7.0.0"
+    "tesseract.js": "^7.0.0",
+    "xlsx": "^0.18.5"
   },
   "optionalDependencies": {
     "canvas": "^3.2.3",

@@ -481,6 +481,28 @@ router.patch('/:id/status', async (req, res) => {
             data: { status }
         });
 
+        // AUTO-CONVERT: When candidate is Hired, create employee record
+        if (status === 'Hired') {
+            try {
+                const { convertCandidateToEmployee } = require('../services/employeeService');
+                const result = await convertCandidateToEmployee(parseInt(id));
+                if (result.success) {
+                    console.log(`[Auto-Convert] Candidate ${id} converted to Employee ${result.employeeId}`);
+                    return res.json({
+                        success: true,
+                        employeeCreated: true,
+                        employeeId: result.employeeId,
+                        credentials: result.credentials,
+                        alreadyExists: result.alreadyExists || false
+                    });
+                } else {
+                    console.warn(`[Auto-Convert] Failed for candidate ${id}:`, result.error);
+                }
+            } catch (convErr) {
+                console.error('[Auto-Convert] Error:', convErr.message);
+            }
+        }
+
         res.json({ success: true });
     } catch (error) {
         console.error('Error updating candidate status:', error);

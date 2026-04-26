@@ -22,6 +22,11 @@ import Welcome from './pages/Welcome';
 import AdminLogin from './pages/AdminLogin';
 import PortalLogin from './pages/PortalLogin';
 import PortalRegister from './pages/PortalRegister';
+import AdminEmployees from './pages/AdminEmployees';
+import EmployeeDetail from './pages/EmployeeDetail';
+import OnboardingLogin from './pages/OnboardingLogin';
+import OnboardingPortal from './pages/OnboardingPortal';
+import ExitForm from './pages/ExitForm';
 import useAutoLogout from './hooks/useAutoLogout';
 import InactivityWarning from './components/InactivityWarning';
 
@@ -152,6 +157,21 @@ function App() {
             <AdminSLA />
           </ProtectedRoute>
         } />
+        <Route path="/admin/employees" element={
+          <ProtectedRoute>
+            <AdminEmployees />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/employees/:id" element={
+          <ProtectedRoute>
+            <EmployeeDetail />
+          </ProtectedRoute>
+        } />
+
+        {/* Onboarding Portal */}
+        <Route path="/onboarding/login" element={<OnboardingLogin />} />
+        <Route path="/onboarding" element={<OnboardingPortal />} />
+        <Route path="/onboarding/exit" element={<ExitForm />} />
       </Routes>
     </Router>
   );
