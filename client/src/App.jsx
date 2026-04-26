@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import JobVacancies from './pages/JobVacancies';
 import AdminVacancies from './pages/AdminVacancies';
@@ -22,27 +22,70 @@ import Welcome from './pages/Welcome';
 import AdminLogin from './pages/AdminLogin';
 import PortalLogin from './pages/PortalLogin';
 import PortalRegister from './pages/PortalRegister';
+import useAutoLogout from './hooks/useAutoLogout';
+import InactivityWarning from './components/InactivityWarning';
+
+const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('adminToken');
+  const navigate = useNavigate();
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('adminToken');
+    navigate('/admin/login', { replace: true });
+  }, [navigate]);
+
+  const { showWarning, remainingSeconds, stayActive } = useAutoLogout({
+    timeoutMs: INACTIVITY_TIMEOUT,
+    onLogout: handleLogout,
+    tokenKey: 'adminToken'
+  });
+
   if (!token) {
     return <Navigate to="/admin/login" replace />;
   }
   return (
     <div className="min-h-screen bg-slate-900 text-slate-200">
       {children}
+      {showWarning && (
+        <InactivityWarning
+          remainingSeconds={remainingSeconds}
+          onStayActive={stayActive}
+        />
+      )}
     </div>
   );
 };
 
 const ProtectedPortalRoute = ({ children }) => {
   const token = localStorage.getItem('portalToken');
+  const navigate = useNavigate();
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('portalToken');
+    localStorage.removeItem('portalUser');
+    navigate('/portal/login', { replace: true });
+  }, [navigate]);
+
+  const { showWarning, remainingSeconds, stayActive } = useAutoLogout({
+    timeoutMs: INACTIVITY_TIMEOUT,
+    onLogout: handleLogout,
+    tokenKey: 'portalToken'
+  });
+
   if (!token) {
     return <Navigate to="/portal/login" replace />;
   }
   return (
     <div className="min-h-screen bg-slate-50">
       {children}
+      {showWarning && (
+        <InactivityWarning
+          remainingSeconds={remainingSeconds}
+          onStayActive={stayActive}
+        />
+      )}
     </div>
   );
 };
