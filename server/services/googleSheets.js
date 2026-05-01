@@ -59,7 +59,8 @@ async function appendToSheet(candidateData, analysisData = null) {
                     "ID", "Date", "Full Name", "Email", "Phone",
                     "Position", "Religion", "Blood Type", "Address", "CV Link",
                     "DISC Profile", "D Score", "I Score", "S Score", "C Score",
-                    "Match Score", "Verdict"
+                    "Aptitude Score", "DISC Score", "CV Score", "Personal Score",
+                    "FINAL Score", "Verdict"
                 ];
                 await sheets.spreadsheets.values.append({
                     spreadsheetId,
@@ -73,7 +74,8 @@ async function appendToSheet(candidateData, analysisData = null) {
         }
 
         // Prepare row data: 
-        // ID, Date, Name, Email, Phone, Position, Religion, Blood, Address, DriveLink, DISC Profile, D, I, S, C, Match Score, Verdict
+        // ID, Date, Name, Email, Phone, Position, Religion, Blood, Address, DriveLink,
+        // DISC Profile, D, I, S, C, Aptitude Score, DISC Score, CV Score, Personal Score, FINAL Score, Verdict
         const row = [
             candidateData.id.toString(),
             new Date().toISOString().split('T')[0], // YYYY-MM-DD
@@ -90,6 +92,11 @@ async function appendToSheet(candidateData, analysisData = null) {
             candidateData.discResult?.iScore || '0',
             candidateData.discResult?.sScore || '0',
             candidateData.discResult?.cScore || '0',
+            // NEW: Detailed scoring breakdown from AI Analysis
+            (analysisData?.details?.aptitudeScore || 0).toString(),
+            (analysisData?.details?.discScore || 0).toString(),
+            (analysisData?.details?.cvScore || 0).toString(),
+            (analysisData?.details?.personalDataScore || 0).toString(),
             (analysisData?.matchScore || candidateData.analysis?.matchScore || 0) + '%',
             analysisData?.verdict || candidateData.analysis?.verdict || '-'
         ];
@@ -100,7 +107,7 @@ async function appendToSheet(candidateData, analysisData = null) {
 
         await sheets.spreadsheets.values.append({
             spreadsheetId: spreadsheetId,
-            range: 'Sheet1!A:G', // Adjust range as needed
+            range: 'Sheet1!A:U', // 21 columns: A through U
             valueInputOption: 'USER_ENTERED',
             resource,
         });
