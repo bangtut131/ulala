@@ -13,6 +13,7 @@ export default function CandidateDetail() {
 
     const [requests, setRequests] = useState([]);
     const [linking, setLinking] = useState(false);
+    const [updatingStatus, setUpdatingStatus] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -65,6 +66,39 @@ export default function CandidateDetail() {
             alert("Failed to link candidate.");
         } finally {
             setLinking(false);
+        }
+    };
+
+    const handleScreeningStatus = async (newStatus) => {
+        const labels = { lanjut_screening: 'Lanjut Screening', rejected: 'Reject' };
+        const confirmMsg = newStatus === 'rejected'
+            ? `Apakah Anda yakin ingin REJECT kandidat "${candidate?.fullName}"?`
+            : `Lanjutkan screening untuk "${candidate?.fullName}"?`;
+
+        if (!window.confirm(confirmMsg)) return;
+        setUpdatingStatus(true);
+
+        try {
+            const token = localStorage.getItem('adminToken');
+            const res = await fetch(`/api/candidates/${id}/screening-status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ screeningStatus: newStatus })
+            });
+            if (res.ok) {
+                setCandidate(prev => ({ ...prev, screeningStatus: newStatus }));
+            } else {
+                const err = await res.json();
+                alert('Gagal: ' + (err.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error: ' + error.message);
+        } finally {
+            setUpdatingStatus(false);
         }
     };
 
@@ -125,6 +159,44 @@ export default function CandidateDetail() {
                                     }`}>
                                     Verdict: {candidate.analysis?.verdict || 'Pending'}
                                 </span>
+
+                                {/* Screening Status Badge */}
+                                {candidate.screeningStatus && candidate.screeningStatus !== 'pending' && (
+                                    <span className={`px-4 py-2 rounded-xl text-sm font-bold border ${
+                                        candidate.screeningStatus === 'lanjut_screening'
+                                            ? 'bg-blue-500/20 text-blue-400 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.3)]'
+                                            : 'bg-red-500/20 text-red-400 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                                    }`}>
+                                        {candidate.screeningStatus === 'lanjut_screening' ? '✅ Lanjut Screening' : '❌ Rejected'}
+                                    </span>
+                                )}
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-2 mt-1">
+                                    <button
+                                        onClick={() => handleScreeningStatus('lanjut_screening')}
+                                        disabled={updatingStatus || candidate.screeningStatus === 'lanjut_screening'}
+                                        className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all duration-300 ${
+                                            candidate.screeningStatus === 'lanjut_screening'
+                                                ? 'bg-blue-500/10 text-blue-400/50 border-blue-500/20 cursor-not-allowed'
+                                                : 'bg-blue-600 hover:bg-blue-500 text-white border-blue-500/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] active:scale-95'
+                                        }`}
+                                    >
+                                        {updatingStatus ? '...' : '✓ Lanjut Screening'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleScreeningStatus('rejected')}
+                                        disabled={updatingStatus || candidate.screeningStatus === 'rejected'}
+                                        className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all duration-300 ${
+                                            candidate.screeningStatus === 'rejected'
+                                                ? 'bg-red-500/10 text-red-400/50 border-red-500/20 cursor-not-allowed'
+                                                : 'bg-red-600 hover:bg-red-500 text-white border-red-500/50 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] active:scale-95'
+                                        }`}
+                                    >
+                                        {updatingStatus ? '...' : '✗ Reject'}
+                                    </button>
+                                </div>
+
                                 {candidate.cvUrl && (
                                     <a href={candidate.cvUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:text-blue-300 underline">
                                         View Original CV

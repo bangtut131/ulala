@@ -436,6 +436,7 @@ const db = {
                     experience: c.experience,
                     education: c.education,
                     snapshots: c.snapshots || [],
+                    screeningStatus: c.screening_status || 'pending',
                     // Flattening related data for dashboard compatibility
                     discResult: disc ? {
                         profile: disc.profile,

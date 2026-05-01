@@ -587,4 +587,29 @@ router.post('/:id/snapshot', express.json({limit: '20mb'}), async (req, res) => 
     }
 });
 
+// PATCH /api/candidates/:id/screening-status - Update Screening Decision
+router.patch('/:id/screening-status', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { screeningStatus } = req.body;
+
+        const validStatuses = ['pending', 'lanjut_screening', 'rejected'];
+        if (!validStatuses.includes(screeningStatus)) {
+            return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+        }
+
+        const { error } = await supabaseAdmin
+            .from('candidates')
+            .update({ screening_status: screeningStatus })
+            .eq('id', parseInt(id));
+
+        if (error) throw error;
+
+        res.json({ success: true, screeningStatus });
+    } catch (error) {
+        console.error('Error updating screening status:', error);
+        res.status(500).json({ error: 'Error updating screening status' });
+    }
+});
+
 module.exports = router;
