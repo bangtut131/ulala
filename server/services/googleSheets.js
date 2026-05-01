@@ -59,7 +59,8 @@ async function appendToSheet(candidateData, analysisData = null) {
                     "ID", "Date", "Full Name", "Email", "Phone",
                     "Position", "Religion", "Blood Type", "Address", "CV Link",
                     "DISC Profile", "D Score", "I Score", "S Score", "C Score",
-                    "Aptitude Score", "DISC Score", "CV Score", "Personal Score",
+                    "Aptitude Raw Score", "Aptitude (Benar/Total)",
+                    "DISC Score (Eval)", "CV Score", "Personal Score",
                     "FINAL Score", "Verdict"
                 ];
                 await sheets.spreadsheets.values.append({
@@ -75,7 +76,9 @@ async function appendToSheet(candidateData, analysisData = null) {
 
         // Prepare row data: 
         // ID, Date, Name, Email, Phone, Position, Religion, Blood, Address, DriveLink,
-        // DISC Profile, D, I, S, C, Aptitude Score, DISC Score, CV Score, Personal Score, FINAL Score, Verdict
+        // DISC Profile, D, I, S, C, Aptitude Raw, Aptitude Detail,
+        // DISC Eval, CV Score, Personal Score, FINAL Score, Verdict
+        const aptRaw = candidateData.aptitudeResult;
         const row = [
             candidateData.id.toString(),
             new Date().toISOString().split('T')[0], // YYYY-MM-DD
@@ -92,8 +95,10 @@ async function appendToSheet(candidateData, analysisData = null) {
             candidateData.discResult?.iScore || '0',
             candidateData.discResult?.sScore || '0',
             candidateData.discResult?.cScore || '0',
-            // NEW: Detailed scoring breakdown from AI Analysis
-            (analysisData?.details?.aptitudeScore || 0).toString(),
+            // Aptitude Raw Data (real test score)
+            aptRaw ? (aptRaw.score || 0).toString() : '-',
+            aptRaw ? `${aptRaw.correctCount || 0}/${aptRaw.totalCount || 60}` : '-',
+            // AI Evaluation Scores
             (analysisData?.details?.discScore || 0).toString(),
             (analysisData?.details?.cvScore || 0).toString(),
             (analysisData?.details?.personalDataScore || 0).toString(),
@@ -107,7 +112,7 @@ async function appendToSheet(candidateData, analysisData = null) {
 
         await sheets.spreadsheets.values.append({
             spreadsheetId: spreadsheetId,
-            range: 'Sheet1!A:U', // 21 columns: A through U
+            range: 'Sheet1!A:V', // 22 columns: A through V
             valueInputOption: 'USER_ENTERED',
             resource,
         });
