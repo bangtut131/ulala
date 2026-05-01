@@ -238,11 +238,30 @@ async function main() {
 }
 
 async function applyFormatting(sheets, spreadsheetId, totalRows, totalCols) {
-    // Get sheetId (usually 0 for Sheet1)
-    const meta = await sheets.spreadsheets.get({ spreadsheetId, fields: 'sheets.properties' });
-    const sheetId = meta.data.sheets[0].properties.sheetId;
+    // Get sheet metadata including existing banded ranges and conditional formats
+    const meta = await sheets.spreadsheets.get({
+        spreadsheetId,
+        fields: 'sheets.properties,sheets.bandedRanges,sheets.conditionalFormats'
+    });
+    const sheet = meta.data.sheets[0];
+    const sheetId = sheet.properties.sheetId;
 
     const requests = [];
+
+    // Delete existing banded ranges first (to avoid duplicate error)
+    if (sheet.bandedRanges && sheet.bandedRanges.length > 0) {
+        sheet.bandedRanges.forEach(br => {
+            requests.push({ deleteBanding: { bandedRangeId: br.bandedRangeId } });
+        });
+    }
+
+    // Delete existing conditional format rules
+    if (sheet.conditionalFormats && sheet.conditionalFormats.length > 0) {
+        // Delete from last to first to avoid index shifting
+        for (let i = sheet.conditionalFormats.length - 1; i >= 0; i--) {
+            requests.push({ deleteConditionalFormatRule: { sheetId, index: i } });
+        }
+    }
 
     // === 1. FREEZE HEADER ROW ===
     requests.push({
