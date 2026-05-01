@@ -66,7 +66,7 @@ async function main() {
 
     if (rows.length < 2) { console.log('⚠️ No data rows.'); process.exit(0); }
 
-    // 3. Fetch analyses + aptitude results from DB
+    // 3. Fetch analyses + aptitude results + candidates from DB
     console.log('\n🔍 Fetching data from database...');
 
     const { data: analyses, error: aErr } = await supabaseAdmin
@@ -79,6 +79,11 @@ async function main() {
         .select('candidate_id, score, correct_count, total_count');
     if (aptErr) { console.error('❌ Aptitude fetch failed:', aptErr.message); process.exit(1); }
 
+    const { data: candidates, error: cErr } = await supabaseAdmin
+        .from('candidates')
+        .select('id, full_name, position, cv_url, cv_drive_id');
+    if (cErr) { console.error('❌ Candidates fetch failed:', cErr.message); process.exit(1); }
+
     // Build lookup maps
     const analysisMap = {};
     analyses.forEach(a => { analysisMap[a.candidate_id] = a; });
@@ -86,10 +91,46 @@ async function main() {
     const aptitudeMap = {};
     aptitudes.forEach(a => { aptitudeMap[a.candidate_id] = a; });
 
+    const candidateMap = {};
+    candidates.forEach(c => { candidateMap[c.id] = c; });
+
     console.log(`   Analyses: ${analyses.length} records (${Object.keys(analysisMap).length} unique candidates)`);
     console.log(`   Aptitude: ${aptitudes.length} records (${Object.keys(aptitudeMap).length} unique candidates)`);
+    console.log(`   Candidates: ${candidates.length} records`);
 
-    // 4. Detect old format
+    // 4. Fetch Google Drive folders (batch — single API call)
+    console.log('\n📂 Fetching Google Drive folders...');
+    const drive = google.drive({ version: 'v3', auth: oAuth2Client });
+    const folderMap = {}; // folder name → folder ID
+
+    try {
+        // Get root folder ID from settings
+        let rootFolderId = settings.googleDriveId || '';
+        if (rootFolderId.includes('/folders/')) rootFolderId = rootFolderId.split('/folders/')[1].split('?')[0];
+
+        if (rootFolderId) {
+            // List all subfolders in root folder
+            let pageToken = null;
+            do {
+                const res = await drive.files.list({
+                    q: `'${rootFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+                    fields: 'nextPageToken, files(id, name)',
+                    pageSize: 200,
+                    pageToken: pageToken
+                });
+                (res.data.files || []).forEach(f => { folderMap[f.name] = f.id; });
+                pageToken = res.data.nextPageToken;
+            } while (pageToken);
+
+            console.log(`   Found ${Object.keys(folderMap).length} candidate folders in Drive`);
+        } else {
+            console.log('   ⚠️ No root Drive folder configured, skipping folder lookup');
+        }
+    } catch (driveErr) {
+        console.warn('   ⚠️ Drive folder lookup failed:', driveErr.message);
+    }
+
+    // 5. Detect old format
     const oldHeader = rows[0];
     const colCount = oldHeader.length;
     console.log(`\n📋 Current header has ${colCount} columns`);
@@ -98,9 +139,10 @@ async function main() {
     const matchScoreIdx = oldHeader.findIndex(h => h === 'Match Score' || h === 'FINAL Score');
     const verdictIdx = oldHeader.findIndex(h => h === 'Verdict');
 
-    // 5. Build updated rows
+    // 6. Build updated rows
     const updatedRows = [NEW_HEADERS];
     let updatedCount = 0;
+    let linkFixedCount = 0;
 
     for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
@@ -113,11 +155,29 @@ async function main() {
 
         const analysis = analysisMap[candidateId];
         const aptitude = aptitudeMap[candidateId];
+        const candidate = candidateMap[candidateId];
 
         // Base data: columns A-O (ID through C Score) — always first 15 columns
         const baseData = row.slice(0, 15);
         // Ensure exactly 15 base columns
         while (baseData.length < 15) baseData.push('');
+
+        // Fix CV Link (column J, index 9)
+        if (candidate) {
+            const folderName = `${candidate.full_name} - ${candidate.position || 'Applicant'}`;
+            const folderId = folderMap[folderName];
+
+            if (folderId) {
+                baseData[9] = `https://drive.google.com/drive/folders/${folderId}`;
+                linkFixedCount++;
+            } else if (candidate.cv_drive_id && !candidate.cv_drive_id.startsWith('mock_')) {
+                baseData[9] = `https://drive.google.com/file/d/${candidate.cv_drive_id}/view`;
+            } else if (candidate.cv_url) {
+                baseData[9] = candidate.cv_url;
+            } else {
+                baseData[9] = '-';
+            }
+        }
 
         // Old match score and verdict (find them regardless of old format)
         let oldFinalScore = '';
@@ -141,12 +201,12 @@ async function main() {
             finalScore, verdict
         ];
 
-        console.log(`   ✏️ Row ${i + 1} (ID: ${candidateId}): Apt=${aptRawScore} (${aptDetail}), DISC=${discEval}, CV=${cvScore}, Pers=${persScore}, Final=${finalScore}`);
+        console.log(`   ✏️ Row ${i + 1} (ID: ${candidateId}): Apt=${aptRawScore} (${aptDetail}), Link=${baseData[9].includes('folders/') ? '📂 Folder' : baseData[9].includes('file/') ? '📄 File' : '⚠️ Other'}`);
         updatedRows.push(newRow);
         updatedCount++;
     }
 
-    console.log(`\n📊 Summary: ${updatedCount} rows processed`);
+    console.log(`\n📊 Summary: ${updatedCount} rows processed, ${linkFixedCount} CV links fixed to folder links`);
 
     // 6. Write + Format
     if (DRY_RUN) {

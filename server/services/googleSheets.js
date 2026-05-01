@@ -22,7 +22,7 @@ const getAuthClient = async () => {
     }
 };
 
-async function appendToSheet(candidateData, analysisData = null) {
+async function appendToSheet(candidateData, analysisData = null, folderId = null) {
     const settings = await getSettings();
     const auth = await getAuthClient();
 
@@ -89,7 +89,10 @@ async function appendToSheet(candidateData, analysisData = null) {
             candidateData.religion || '-',
             candidateData.bloodType || '-',
             candidateData.address || '-',
-            candidateData.cvWebViewLink || `https://drive.google.com/file/d/${candidateData.cvDriveId}`, // Try to construct link
+            // Construct Drive link: prefer folder link, fallback to file link, then cv_url
+            folderId ? `https://drive.google.com/drive/folders/${folderId}`
+                : candidateData.cvDriveId ? `https://drive.google.com/file/d/${candidateData.cvDriveId}/view`
+                : candidateData.cvUrl || '-',
             candidateData.discResult?.profile || '-',
             candidateData.discResult?.dScore || '0',
             candidateData.discResult?.iScore || '0',

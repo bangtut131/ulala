@@ -246,9 +246,16 @@ async function runAnalysis(candidateId, aptitudeResultId = null) {
         });
 
         // D. Integrations
+        // Pre-create/find the candidate folder for linking in the spreadsheet
+        let candidateFolderId = null;
+        try {
+            const folderName = `${candidate.fullName} - ${candidate.position || 'Applicant'}`;
+            candidateFolderId = await createFolder(folderName);
+        } catch (folderErr) { console.warn("[Worker] Folder lookup warning:", folderErr.message); }
+
         try {
             const { appendToSheet } = require('./googleSheets');
-            await appendToSheet({ ...candidate, discResult: candidate.discResult }, analysisData);
+            await appendToSheet({ ...candidate, discResult: candidate.discResult }, analysisData, candidateFolderId);
             console.log("[Worker] Google Sheet updated.");
         } catch (sheetErr) { console.warn("[Worker] Google Sheet warning:", sheetErr.message); }
 
